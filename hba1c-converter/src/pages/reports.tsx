@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AgCharts } from 'ag-charts-enterprise';
 import CubicSpline from 'cubic-spline';
+import { AgCartesianChartOptions } from 'ag-charts-enterprise'; // Import the correct type
 
 interface BloodSugarData {
   sgv: number; // Sensor Glucose Value
@@ -125,77 +126,79 @@ const Reports: React.FC = () => {
     return 0; // Fallback value if no valid values are found
   };
 
-  const createChart = (agpData: any) => {
-    const data = agpData.labels.map((time: string, index: number) => ({
-      time,
-      range10Low: agpData.range10[index]?.lower ?? null, // Preserve null for missing values
-      range10High: agpData.range10[index]?.upper ?? null, // Preserve null for missing values
-      range50Low: agpData.range50[index]?.lower ?? null, // Preserve null for missing values
-      range50High: agpData.range50[index]?.upper ?? null, // Preserve null for missing values
-      median: agpData.median[index] ?? null, // Preserve null for missing values
-    }));
-  
-    console.log('Chart Data:', data);
-  
-    const options = {
-      container: chartRef.current,
-      data,
-      title: {
-        text: 'Ambulatory Glucose Profile (AGP)',
-        fontSize: 18,
+
+
+const createChart = (agpData: any) => {
+  const data = agpData.labels.map((time: string, index: number) => ({
+    time,
+    range10Low: agpData.range10[index]?.lower ?? null, // Preserve null for missing values
+    range10High: agpData.range10[index]?.upper ?? null, // Preserve null for missing values
+    range50Low: agpData.range50[index]?.lower ?? null, // Preserve null for missing values
+    range50High: agpData.range50[index]?.upper ?? null, // Preserve null for missing values
+    median: agpData.median[index] ?? null, // Preserve null for missing values
+  }));
+
+  console.log('Chart Data:', data);
+
+  const options: AgCartesianChartOptions = {
+    container: chartRef.current!,
+    data,
+    title: {
+      text: 'Ambulatory Glucose Profile (AGP)',
+      fontSize: 18,
+    },
+    series: [
+      {
+        type: 'range-area',
+        xKey: 'time',
+        yLowKey: 'range10Low',
+        yHighKey: 'range10High',
+        fillOpacity: 0.2,
+        fill: 'rgba(128, 128, 255, 0.2)',
+        stroke: 'rgba(128, 128, 255, 0.2)',
+        tooltip: { enabled: false },
       },
-      series: [
-        {
-          type: 'range-area',
-          xKey: 'time',
-          yLowKey: 'range10Low',
-          yHighKey: 'range10High',
-          fillOpacity: 0.2,
-          fill: 'rgba(128, 128, 255, 0.2)',
-          stroke: 'rgba(128, 128, 255, 0.2)',
-          tooltip: { enabled: false },
-        },
-        {
-          type: 'range-area',
-          xKey: 'time',
-          yLowKey: 'range50Low',
-          yHighKey: 'range50High',
-          fillOpacity: 0.4,
-          fill: 'rgba(91, 89, 89, 0.4)',
-          stroke: 'rgba(91, 89, 89, 0.4)',
-          tooltip: { enabled: false },
-        },
-        {
-          type: 'line',
-          xKey: 'time',
-          yKey: 'median',
-          stroke: 'blue',
-          strokeWidth: 2,
-          marker: { enabled: false },
-          tooltip: {
-            enabled: true,
-            renderer: (params: any) => {
-              if (params.yValue !== undefined && params.yValue !== null) {
-                return { content: `Median: ${params.yValue.toFixed(2)} mmol/L` };
-              }
-              return { content: 'No data available' };
-            },
+      {
+        type: 'range-area',
+        xKey: 'time',
+        yLowKey: 'range50Low',
+        yHighKey: 'range50High',
+        fillOpacity: 0.4,
+        fill: 'rgba(91, 89, 89, 0.4)',
+        stroke: 'rgba(91, 89, 89, 0.4)',
+        tooltip: { enabled: false },
+      },
+      {
+        type: 'line',
+        xKey: 'time',
+        yKey: 'median',
+        stroke: 'blue',
+        strokeWidth: 2,
+        marker: { enabled: false },
+        tooltip: {
+          enabled: true,
+          renderer: (params: any) => {
+            if (params.yValue !== undefined && params.yValue !== null) {
+              return { content: `Median: ${params.yValue.toFixed(2)} mmol/L` };
+            }
+            return { content: 'No data available' };
           },
         },
-      ],
-      axes: [
-        { type: 'category', position: 'bottom', title: { text: 'Time of Day' } },
-        { type: 'number', position: 'left', title: { text: 'Blood Sugar (mmol/L)' } },
-      ],
-      legend: { position: 'bottom' },
-    };
-  
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
-    }
-  
-    chartInstance.current = AgCharts.create(options);
+      },
+    ],
+    axes: [
+      { type: 'category', position: 'bottom', title: { text: 'Time of Day' } },
+      { type: 'number', position: 'left', title: { text: 'Blood Sugar (mmol/L)' } },
+    ],
+    legend: { position: 'bottom' },
   };
+
+  if (chartInstance.current) {
+    chartInstance.current.destroy();
+  }
+
+  chartInstance.current = AgCharts.create(options);
+};
 
   const processAGPData = () => {
     console.log('Starting data processing...');
