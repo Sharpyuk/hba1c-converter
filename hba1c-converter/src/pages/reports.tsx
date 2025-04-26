@@ -71,121 +71,68 @@ const Reports: React.FC = () => {
     };
   }, [graphData]);
   
-  const processAGPData = () => {
-    console.log('Starting data processing...');
-    console.log('Raw Graph Data:', graphData);
+  const findNearestValidAverage = (array: number[], index: number): number => {
+    let prev = index - 1;
+    let next = index + 1;
   
-    const chunkedData: { [key: string]: number[] } = {};
+    // Variables to store the nearest valid values
+    let prevValue: number | null = null;
+    let nextValue: number | null = null;
   
-    // Group data into 5-minute chunks
-    graphData.forEach((entry) => {
-      const date = new Date(entry.dateString);
-  
-      // Round the minutes down to the nearest 5-minute interval
-      const roundedMinutes = Math.floor(date.getMinutes() / 5) * 5;
-      const chunkKey = `${date.getHours().toString().padStart(2, '0')}:${roundedMinutes
-        .toString()
-        .padStart(2, '0')}`;
-  
-      if (!chunkedData[chunkKey]) {
-        chunkedData[chunkKey] = [];
+    // Search backward for the nearest valid value
+    while (prev >= 0) {
+      if (!isNaN(array[prev])) {
+        prevValue = array[prev];
+        break;
       }
-      chunkedData[chunkKey].push(entry.sgv / 18); // Convert to mmol/L
-    });
-  
-    console.log('Chunked Data:', chunkedData);
-  
-    const labels: string[] = [];
-    const range10: { lower: number; upper: number }[] = [];
-    const range50: { lower: number; upper: number }[] = [];
-  
-    const timePoints: number[] = [];
-    const lowerPoints: number[] = [];
-    const upperPoints: number[] = [];
-    const medianPoints: number[] = [];
-  
-    Object.keys(chunkedData)
-      .sort()
-      .forEach((chunkKey, index) => {
-        const values = chunkedData[chunkKey].sort((a, b) => a - b);
-  
-        if (values.length > 0) {
-          // Calculate the 10th, 25th, 75th, and 90th percentiles
-          const p10 = values[Math.floor(values.length * 0.1)] || NaN;
-          const p25 = values[Math.floor(values.length * 0.25)] || NaN;
-          const p75 = values[Math.floor(values.length * 0.75)] || NaN;
-          const p90 = values[Math.floor(values.length * 0.9)] || NaN;
-  
-          labels.push(chunkKey);
-          range10.push({ lower: p10, upper: p90 });
-          range50.push({ lower: p25, upper: p75 });
-  
-          // Use timestamps for timePoints
-          const [hours, minutes] = chunkKey.split(':').map(Number);
-          const timestamp = hours * 60 + minutes; // Convert time to minutes since midnight
-          timePoints.push(timestamp);
-          lowerPoints.push(isNaN(p25) ? 0 : p25);
-          upperPoints.push(isNaN(p75) ? 0 : p75);
-          medianPoints.push(isNaN(p25) || isNaN(p75) ? 0 : (p25 + p75) / 2); // Median is the average of 25th and 75th percentiles
-        }
-      });
-  
-    console.log('Time Points:', timePoints);
-    console.log('Lower Points:', lowerPoints);
-    console.log('Upper Points:', upperPoints);
-    console.log('Median Points:', medianPoints);
-  
-    // Apply cubic spline interpolation for smoothing
-    const splineLower = new CubicSpline(timePoints, lowerPoints);
-    const splineUpper = new CubicSpline(timePoints, upperPoints);
-    const splineMedian = new CubicSpline(timePoints, medianPoints);
-  
-    const smoothedRange50: { lower: number; upper: number }[] = [];
-    const smoothedMedian: number[] = [];
-    for (let i = 0; i < timePoints.length; i++) {
-      let lower = splineLower.at(timePoints[i]);
-      let upper = splineUpper.at(timePoints[i]);
-      let median = splineMedian.at(timePoints[i]);
-  
-      // Handle NaN values by taking the average of the previous and next values
-      if (isNaN(lower)) {
-        lower = i > 0 && i < timePoints.length - 1
-          ? (splineLower.at(timePoints[i - 1]) + splineLower.at(timePoints[i + 1])) / 2
-          : (i > 0 ? splineLower.at(timePoints[i - 1]) : splineLower.at(timePoints[i + 1])) || 0;
-      }
-      if (isNaN(upper)) {
-        upper = i > 0 && i < timePoints.length - 1
-          ? (splineUpper.at(timePoints[i - 1]) + splineUpper.at(timePoints[i + 1])) / 2
-          : (i > 0 ? splineUpper.at(timePoints[i - 1]) : splineUpper.at(timePoints[i + 1])) || 0;
-      }
-      if (isNaN(median)) {
-        median = i > 0 && i < timePoints.length - 1
-          ? (splineMedian.at(timePoints[i - 1]) + splineMedian.at(timePoints[i + 1])) / 2
-          : (i > 0 ? splineMedian.at(timePoints[i - 1]) : splineMedian.at(timePoints[i + 1])) || 0;
-      }
-  
-      // Ensure no NaN values are pushed to the smoothed arrays
-      smoothedRange50.push({
-        lower: isNaN(lower) ? 0 : lower,
-        upper: isNaN(upper) ? 0 : upper,
-      });
-      smoothedMedian.push(isNaN(median) ? 0 : median);
+      prev--;
     }
   
-    console.log('Smoothed Range 50:', smoothedRange50);
-    console.log('Smoothed Median:', smoothedMedian);
+    // Search forward for the nearest valid value
+    while (next < array.length) {
+      if (!isNaN(array[next])) {
+        nextValue = array[next];
+        break;
+      }
+      next++;
+    }
   
-    return { labels, range10, range50: smoothedRange50, median: smoothedMedian };
+    // If both previous and next values are found, return their average
+    if (prevValue !== null && nextValue !== null) {
+      return (prevValue + nextValue) / 2;
+    }
+  
+    // If only the previous value is found, return it
+    if (prevValue !== null) {
+      return prevValue;
+    }
+  
+    // If only the next value is found, return it
+    if (nextValue !== null) {
+      return nextValue;
+    }
+  
+    // If no valid values are found, search further in the array
+    for (let i = 1; i < array.length; i++) {
+      if (index - i >= 0 && !isNaN(array[index - i])) {
+        return array[index - i];
+      }
+      if (index + i < array.length && !isNaN(array[index + i])) {
+        return array[index + i];
+      }
+    }
+  
+    return 0; // Fallback value if no valid values are found
   };
 
   const createChart = (agpData: any) => {
     const data = agpData.labels.map((time: string, index: number) => ({
       time,
-      range10Low: agpData.range10[index]?.lower ?? 0,
-      range10High: agpData.range10[index]?.upper ?? 0,
-      range50Low: agpData.range50[index]?.lower ?? 0,
-      range50High: agpData.range50[index]?.upper ?? 0,
-      median: agpData.median[index] ?? 0, // Use smoothed median
+      range10Low: agpData.range10[index]?.lower ?? null, // Preserve null for missing values
+      range10High: agpData.range10[index]?.upper ?? null, // Preserve null for missing values
+      range50Low: agpData.range50[index]?.lower ?? null, // Preserve null for missing values
+      range50High: agpData.range50[index]?.upper ?? null, // Preserve null for missing values
+      median: agpData.median[index] ?? null, // Preserve null for missing values
     }));
   
     console.log('Chart Data:', data);
@@ -248,6 +195,59 @@ const Reports: React.FC = () => {
     }
   
     chartInstance.current = AgCharts.create(options);
+  };
+
+  const processAGPData = () => {
+    console.log('Starting data processing...');
+    console.log('Raw Graph Data:', graphData);
+  
+    const chunkedData: { [key: string]: number[] } = {};
+  
+    // Group data into 5-minute chunks
+    graphData.forEach((entry) => {
+      const date = new Date(entry.dateString);
+  
+      // Round the minutes down to the nearest 5-minute interval
+      const roundedMinutes = Math.floor(date.getMinutes() / 5) * 5;
+      const chunkKey = `${date.getHours().toString().padStart(2, '0')}:${roundedMinutes
+        .toString()
+        .padStart(2, '0')}`;
+  
+      if (!chunkedData[chunkKey]) {
+        chunkedData[chunkKey] = [];
+      }
+      chunkedData[chunkKey].push(entry.sgv / 18); // Convert to mmol/L
+    });
+  
+    console.log('Chunked Data:', chunkedData);
+  
+    const labels: string[] = [];
+    const range10: { lower: number | null; upper: number | null }[] = [];
+    const range50: { lower: number | null; upper: number | null }[] = [];
+    const medianPoints: (number | null)[] = [];
+  
+    Object.keys(chunkedData)
+      .sort()
+      .forEach((chunkKey) => {
+        const values = chunkedData[chunkKey].sort((a, b) => a - b);
+  
+        if (values.length > 0) {
+          // Calculate the 10th, 25th, 75th, and 90th percentiles
+          const p10 = values[Math.floor(values.length * 0.1)] || null;
+          const p25 = values[Math.floor(values.length * 0.25)] || null;
+          const p75 = values[Math.floor(values.length * 0.75)] || null;
+          const p90 = values[Math.floor(values.length * 0.9)] || null;
+  
+          labels.push(chunkKey);
+          range10.push({ lower: p10, upper: p90 });
+          range50.push({ lower: p25, upper: p75 });
+          medianPoints.push(p25 !== null && p75 !== null ? (p25 + p75) / 2 : null);
+        }
+      });
+  
+    console.log('Processed Data:', { labels, range10, range50, median: medianPoints });
+  
+    return { labels, range10, range50, median: medianPoints };
   };
 
   return (
