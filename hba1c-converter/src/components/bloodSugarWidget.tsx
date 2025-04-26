@@ -1,4 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface BloodSugarData {
   sgv: number; // Sensor Glucose Value
@@ -11,6 +23,7 @@ const BloodSugarWidget: React.FC = () => {
   const [timestamp, setTimestamp] = useState<string | null>(null);
   const [trend, setTrend] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [graphData, setGraphData] = useState<BloodSugarData[]>([]);
 
   const fetchBloodSugar = async () => {
     try {
@@ -31,12 +44,29 @@ const BloodSugarWidget: React.FC = () => {
     }
   };
 
+  const fetchGraphData = async () => {
+    try {
+      const response = await fetch('https://sharpy-cgm.up.railway.app/api/v1/entries.json?count=36'); // Fetch last 3 hours (assuming 5-minute intervals)
+      if (!response.ok) {
+        throw new Error('Failed to fetch graph data');
+      }
+      const data: BloodSugarData[] = await response.json();
+      setGraphData(data.reverse()); // Reverse to show oldest first
+    } catch (err) {
+      console.error('Error fetching graph data:', err.message);
+    }
+  };
+
   useEffect(() => {
     // Fetch data immediately on component mount
     fetchBloodSugar();
+    fetchGraphData();
 
     // Set up an interval to fetch data every 60 seconds
-    const interval = setInterval(fetchBloodSugar, 60000);
+    const interval = setInterval(() => {
+      fetchBloodSugar();
+      fetchGraphData();
+    }, 60000);
 
     // Clean up the interval when the component unmounts
     return () => clearInterval(interval);
@@ -78,6 +108,46 @@ const BloodSugarWidget: React.FC = () => {
 
   const mmolL = convertToMmolL(bloodSugar);
 
+  const chartData = {
+    labels: graphData.map((entry) =>
+      new Date(entry.dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    ), // Format timestamps without seconds
+    datasets: [
+      {
+        label: 'Blood Sugar (mmol/L)',
+        data: graphData.map((entry) => convertToMmolL(entry.sgv)), // Convert to mmol/L
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.4,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false, // Allow custom height and width
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Time',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Blood Sugar (mmol/L)',
+        },
+        beginAtZero: false,
+      },
+    },
+  };
+
   return (
     <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center`}>
       {error ? (
@@ -88,6 +158,9 @@ const BloodSugarWidget: React.FC = () => {
             Current Blood Sugar: {mmolL} mmol/L {getTrendArrow(trend)}
           </p>
           <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
+          <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
+            <Line data={chartData} options={chartOptions} />
+          </div>
         </div>
       ) : (
         <p>Loading...</p>
