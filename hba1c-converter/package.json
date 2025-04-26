@@ -1,0 +1,33 @@
+{
+  "name": "hba1c-converter",
+  "version": "1.0.0",
+  "description": "A web application to convert HbA1c values between percentage and mmol/mol.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "HbA1c",
+    "conversion",
+    "health",
+    "Next.js",
+    "React"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.2",
+    "@types/react": "19.1.2",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "typescript": "latest"
+  }
+}
