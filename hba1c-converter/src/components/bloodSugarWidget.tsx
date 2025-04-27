@@ -155,7 +155,7 @@ const BloodSugarWidget: React.FC = () => {
       ) : bloodSugar !== null ? (
         <div>
           <p className="text-lg font-bold">
-            Current Blood Sugar: {mmolL} mmol/L {getTrendArrow(trend)}
+            Current Blood Sugar: <br/> <span className="text-4xl">{mmolL} mmol/L {getTrendArrow(trend)}</span>
           </p>
           <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
           <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
