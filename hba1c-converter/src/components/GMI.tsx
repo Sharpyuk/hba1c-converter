@@ -84,7 +84,7 @@ const GMI: React.FC = () => {
   return (
     <div className="bg-white p-4 rounded-md shadow-md">
       <h2 className="text-xl font-semibold mb-4">Estimated HbA1c (GMI)</h2>
-      <div className="flex flex-col items-center mb-4">
+      
       {loading ? (
         <p className="text-center text-gray-500">Loading...</p>
       ) : gmi.mmol !== null && gmi.percentage !== null ? (
@@ -99,55 +99,40 @@ const GMI: React.FC = () => {
       ) : (
         <p className="text-center text-gray-500">No data available for the selected range.</p>
       )}
-      <br/>
-        <div className="flex space-x-4">
-          <label className="flex items-center space-x-2">
-            <input
-              type="radio"
-              name="range"
-              value="1d"
-              checked={range === '1d'}
-              onChange={(e) => setRange(e.target.value)}
-              className="form-radio"
-            />
-            <span>Last 1 Day</span>
-          </label>
-          <label className="flex items-center space-x-2">
-            <input
-              type="radio"
-              name="range"
-              value="1w"
-              checked={range === '1w'}
-              onChange={(e) => setRange(e.target.value)}
-              className="form-radio"
-            />
-            <span>Last 1 Week</span>
-          </label>
-          <label className="flex items-center space-x-2">
-            <input
-              type="radio"
-              name="range"
-              value="1m"
-              checked={range === '1m'}
-              onChange={(e) => setRange(e.target.value)}
-              className="form-radio"
-            />
-            <span>Last 1 Month</span>
-          </label>
-          <label className="flex items-center space-x-2">
-            <input
-              type="radio"
-              name="range"
-              value="3m"
-              checked={range === '3m'}
-              onChange={(e) => setRange(e.target.value)}
-              className="form-radio"
-            />
-            <span>Last 3 Months</span>
-          </label>
-        </div>
+      <div className="flex justify-center mt-4 space-x-2">
+        <button
+          onClick={() => setRange('1d')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          1 Day
+        </button>
+        <button
+          onClick={() => setRange('1w')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          1 Week
+        </button>
+        <button
+          onClick={() => setRange('1m')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '1m' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          1 Month
+        </button>
+        <button
+          onClick={() => setRange('3m')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '3m' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          3 Months
+        </button>
       </div>
-      
     </div>
   );
 };

@@ -168,67 +168,68 @@ const BloodSugarWidget: React.FC = () => {
 
   return (
     <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center`}>
-      {error ? (
-        <p>Error: {error}</p>
-      ) : bloodSugar !== null ? (
-        <div>
-          <p className="text-lg font-bold">
-            Current Blood Sugar: <br />{' '}
-            <span className="text-4xl">
-              {mmolL} mmol/L {getTrendArrow(trend)}
-            </span>
-          </p>
-          <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
-          <div className="flex justify-center mt-4 space-x-2">
-  <button
-    onClick={() => setRange('3h')}
-    className={`px-4 py-2 rounded-md font-semibold ${
-      range === '3h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-    } hover:bg-blue-500 hover:text-white transition`}
-  >
-    3 Hours
-  </button>
-  <button
-    onClick={() => setRange('12h')}
-    className={`px-4 py-2 rounded-md font-semibold ${
-      range === '12h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-    } hover:bg-blue-500 hover:text-white transition`}
-  >
-    12 Hours
-  </button>
-  <button
-    onClick={() => setRange('1d')}
-    className={`px-4 py-2 rounded-md font-semibold ${
-      range === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-    } hover:bg-blue-500 hover:text-white transition`}
-  >
-    1 Day
-  </button>
-  <button
-    onClick={() => setRange('3d')}
-    className={`px-4 py-2 rounded-md font-semibold ${
-      range === '3d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-    } hover:bg-blue-500 hover:text-white transition`}
-  >
-    3 Days
-  </button>
-  <button
-    onClick={() => setRange('1w')}
-    className={`px-4 py-2 rounded-md font-semibold ${
-      range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-    } hover:bg-blue-500 hover:text-white transition`}
-  >
-    1 Week
-  </button>
-</div>
-          <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
-            <Line data={chartData} options={chartOptions} />
-          </div>
-        </div>
-      ) : (
-        <p>Loading...</p>
-      )}
+  {error ? (
+    <p>Error: {error}</p>
+  ) : bloodSugar !== null ? (
+    <div>
+      <p className="text-lg font-bold">
+        Current Blood Sugar: <br />{' '}
+        <span className="text-4xl">
+          {mmolL} mmol/L {getTrendArrow(trend)}
+        </span>
+      </p>
+      <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
+      <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
+        <Line data={chartData} options={chartOptions} />
+      </div>
+      {/* Add margin between the graph and the buttons */}
+      <div className="flex justify-center mt-6 space-x-4">
+        <button
+          onClick={() => setRange('3h')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '3h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          3 Hours
+        </button>
+        <button
+          onClick={() => setRange('12h')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '12h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          12 Hours
+        </button>
+        <button
+          onClick={() => setRange('1d')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          1 Day
+        </button>
+        <button
+          onClick={() => setRange('3d')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '3d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          3 Days
+        </button>
+        <button
+          onClick={() => setRange('1w')}
+          className={`px-4 py-2 rounded-md font-semibold ${
+            range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+          } hover:bg-blue-500 hover:text-white transition`}
+        >
+          1 Week
+        </button>
+      </div>
     </div>
+  ) : (
+    <p>Loading...</p>
+  )}
+</div>
   );
 };
 
