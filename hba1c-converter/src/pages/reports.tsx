@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AgCharts } from 'ag-charts-enterprise';
 import CubicSpline from 'cubic-spline';
-import { AgCartesianChartOptions } from 'ag-charts-enterprise'; // Import the correct type
+import { AgCartesianChartOptions } from 'ag-charts-enterprise';
+import StatisticsWidget from '../components/StatisticsWidget'; // Import the StatisticsWidget
 
 interface BloodSugarData {
   sgv: number; // Sensor Glucose Value
@@ -10,7 +11,7 @@ interface BloodSugarData {
 
 const Reports: React.FC = () => {
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<any>(null); // To store the chart instance
+  const chartInstance = useRef<any>(null);
   const [graphData, setGraphData] = useState<BloodSugarData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<string>('1w'); // Default range is 1 week
@@ -35,7 +36,7 @@ const Reports: React.FC = () => {
       setGraphData(data.reverse());
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError((err as Error).message);
+      setError(err.message);
     }
   };
 
@@ -59,7 +60,6 @@ const Reports: React.FC = () => {
 
   const processAGPData = () => {
     const chunkedData: { [key: string]: number[] } = {};
-
     graphData.forEach((entry) => {
       const date = new Date(entry.dateString);
       const roundedMinutes = Math.floor(date.getMinutes() / 5) * 5;
@@ -70,7 +70,7 @@ const Reports: React.FC = () => {
       if (!chunkedData[chunkKey]) {
         chunkedData[chunkKey] = [];
       }
-      chunkedData[chunkKey].push(entry.sgv / 18);
+      chunkedData[chunkKey].push(entry.sgv / 18); // Convert to mmol/L
     });
 
     const labels: string[] = [];
@@ -183,6 +183,9 @@ const Reports: React.FC = () => {
           <option value="1m">Last 1 Month</option>
           <option value="3m">Last 3 Months</option>
         </select>
+      </div>
+      <div className="grid grid-cols-1 gap-6">
+        <StatisticsWidget />
       </div>
       {error ? (
         <p className="text-red-500 text-center">{error}</p>
