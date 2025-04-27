@@ -24,6 +24,7 @@ const BloodSugarWidget: React.FC = () => {
   const [trend, setTrend] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<BloodSugarData[]>([]);
+  const [range, setRange] = useState<string>('3h'); // Default range is 3 hours
 
   const fetchBloodSugar = async () => {
     try {
@@ -46,7 +47,15 @@ const BloodSugarWidget: React.FC = () => {
 
   const fetchGraphData = async () => {
     try {
-      const response = await fetch('https://sharpy-cgm.up.railway.app/api/v1/entries.json?count=36'); // Fetch last 3 hours (assuming 5-minute intervals)
+      let count = 36; // Default to 3 hours (assuming 5-minute intervals)
+      if (range === '12h') count = 144; // 12 hours
+      if (range === '1d') count = 288; // 1 day
+      if (range === '3d') count = 864; // 3 days
+      if (range === '1w') count = 2016; // 1 week
+
+      const response = await fetch(
+        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?count=${count}`
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch graph data');
       }
@@ -70,7 +79,7 @@ const BloodSugarWidget: React.FC = () => {
 
     // Clean up the interval when the component unmounts
     return () => clearInterval(interval);
-  }, []);
+  }, [range]);
 
   const getTrendArrow = (direction: string | null) => {
     switch (direction) {
@@ -155,9 +164,54 @@ const BloodSugarWidget: React.FC = () => {
       ) : bloodSugar !== null ? (
         <div>
           <p className="text-lg font-bold">
-            Current Blood Sugar: <br/> <span className="text-4xl">{mmolL} mmol/L {getTrendArrow(trend)}</span>
+            Current Blood Sugar: <br />{' '}
+            <span className="text-4xl">
+              {mmolL} mmol/L {getTrendArrow(trend)}
+            </span>
           </p>
           <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
+          <div className="flex justify-center mt-4 space-x-2">
+  <button
+    onClick={() => setRange('3h')}
+    className={`px-4 py-2 rounded-md font-semibold ${
+      range === '3h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+    } hover:bg-blue-500 hover:text-white transition`}
+  >
+    3 Hours
+  </button>
+  <button
+    onClick={() => setRange('12h')}
+    className={`px-4 py-2 rounded-md font-semibold ${
+      range === '12h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+    } hover:bg-blue-500 hover:text-white transition`}
+  >
+    12 Hours
+  </button>
+  <button
+    onClick={() => setRange('1d')}
+    className={`px-4 py-2 rounded-md font-semibold ${
+      range === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+    } hover:bg-blue-500 hover:text-white transition`}
+  >
+    1 Day
+  </button>
+  <button
+    onClick={() => setRange('3d')}
+    className={`px-4 py-2 rounded-md font-semibold ${
+      range === '3d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+    } hover:bg-blue-500 hover:text-white transition`}
+  >
+    3 Days
+  </button>
+  <button
+    onClick={() => setRange('1w')}
+    className={`px-4 py-2 rounded-md font-semibold ${
+      range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+    } hover:bg-blue-500 hover:text-white transition`}
+  >
+    1 Week
+  </button>
+</div>
           <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
             <Line data={chartData} options={chartOptions} />
           </div>
