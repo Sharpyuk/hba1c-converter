@@ -118,9 +118,18 @@ const BloodSugarWidget: React.FC = () => {
   const mmolL = convertToMmolL(bloodSugar);
 
   const chartData = {
-    labels: graphData.map((entry) =>
-      new Date(entry.dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    ), // Format timestamps without seconds
+    labels: graphData.map((entry) => {
+      const date = new Date(entry.dateString);
+      if (range === '3h' || range === '12h' || range === '1d') {
+        // Display only the time for shorter ranges
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } else {
+        // Display both date and time for longer ranges
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + 
+               ' ' + 
+               date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }),
     datasets: [
       {
         label: 'Blood Sugar (mmol/L)',
