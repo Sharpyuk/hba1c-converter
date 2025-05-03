@@ -35,11 +35,15 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
   const [timeBelowMyRange, setTimeBelowMyRange] = useState<number>(0);
   const [totalCarbs, setTotalCarbs] = useState<number>(0);
   const [averageCarbsPerDay, setAverageCarbsPerDay] = useState<number>(0);
+  const [averageCarbLoadPerDay, setAverageCarbLoadPerDay] = useState<number>(0);
+  
   const [totalInsulin, setTotalInsulin] = useState<{ basal: number; bolus: number }>({
     basal: 0,
     bolus: 0,
   });
   const [averageDailyInsulin, setAverageDailyInsulin] = useState<number>(0);
+  const [proteinCarbs, setProteinCarbs] = useState<number>(0);
+  const [totalCarbLoad, setTotalCarbLoad] = useState<number>(0);
 
   useEffect(() => {
     fetchStatistics();
@@ -50,7 +54,7 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       setLoading(true);
       const now = new Date();
       let startDate = new Date();
-
+  
       // Calculate the start date based on the selected range
       if (range === 'today') {
         startDate.setUTCHours(0, 0, 0, 0);
@@ -67,131 +71,150 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       } else if (range === '3m') {
         startDate.setUTCMonth(now.getUTCMonth() - 3);
       }
-
+  
       console.log('Range:', range);
       console.log('Start Date (UTC):', startDate.toISOString());
       console.log('End Date (UTC):', now.toISOString());
-
+  
       // Fetch blood sugar data for TIR, TAR, and TBR
       const entriesQuery = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
       const entriesResponse = await fetch(
         `https://sharpy-cgm.up.railway.app/api/v1/entries.json?${entriesQuery}&count=10000`
       );
-
+  
       if (!entriesResponse.ok) {
         throw new Error(`Failed to fetch blood sugar data: ${entriesResponse.status}`);
       }
-
+  
       const bloodSugarData: BloodSugarData[] = await entriesResponse.json();
       const totalReadings = bloodSugarData.length;
-
+  
       // Calculate TIR, TAR, and TBR as percentages
       const inRange = bloodSugarData.filter((entry) => entry.sgv / 18 >= 4 && entry.sgv / 18 <= 8).length;
       const aboveRange = bloodSugarData.filter((entry) => entry.sgv / 18 > 8).length;
       const belowRange = bloodSugarData.filter((entry) => entry.sgv / 18 < 4).length;
-
+  
       // Calculate TIR, TAR, and TBR as percentages for MY RANGE
       const inMyRange = bloodSugarData.filter((entry) => entry.sgv / 18 >= 4 && entry.sgv / 18 <= 5.5).length;
       const aboveMyRange = bloodSugarData.filter((entry) => entry.sgv / 18 > 5.5).length;
       const belowMyRange = bloodSugarData.filter((entry) => entry.sgv / 18 < 3.8).length;
-
+  
       setTimeInRange(totalReadings > 0 ? (inRange / totalReadings) * 100 : 0);
       setTimeAboveRange(totalReadings > 0 ? (aboveRange / totalReadings) * 100 : 0);
       setTimeBelowRange(totalReadings > 0 ? (belowRange / totalReadings) * 100 : 0);
       setTimeInMyRange(totalReadings > 0 ? (inMyRange / totalReadings) * 100 : 0);
       setTimeAboveMyRange(totalReadings > 0 ? (aboveMyRange / totalReadings) * 100 : 0);
       setTimeBelowMyRange(totalReadings > 0 ? (belowMyRange / totalReadings) * 100 : 0);
-
-
+  
       // Fetch treatment data for insulin and carbs
-    //   const treatmentsQuery = `find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lt]=${now.toISOString()}`;
-    //   const treatmentsResponse = await fetch(
-    //     `https://sharpy-cgm.up.railway.app/api/v1/treatments.json?count=10000&${treatmentsQuery}`
-    //   );
-
       const treatmentsQuery = `find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lt]=${now.toISOString()}`;
       const treatmentsResponse = await fetch(
         `https://sharpy-cgm.up.railway.app/api/v1/treatments.json?count=100000&${treatmentsQuery}`
       );
-
+  
       if (!treatmentsResponse.ok) {
         throw new Error(`Failed to fetch treatment data: ${treatmentsResponse.status}`);
       }
-
+  
       const treatmentData: TreatmentData[] = await treatmentsResponse.json();
-
+  
       // Log the treatment data to the console
       console.log('Fetched Treatment Data:', treatmentData);
-
+  
       // Calculate total carbs
-      const totalCarbsEaten = treatmentData.reduce((sum, entry) => sum + (entry.carbs || 0), 0);
-      setTotalCarbs(totalCarbsEaten);
+      const actualCarbs = treatmentData
+      .filter((entry) => entry.eventType === 'Carb Correction' && entry.carbs > 1.9) // Filter for "Carb Correction" and carbs > 1.9
+      .reduce((sum, entry) => sum + (entry.carbs || 0), 0);
 
+      const proteinCarbs = treatmentData
+      .filter((entry) => entry.eventType === 'Carb Correction' && entry.carbs <= 1.9) // Filter for "Carb Correction" and carbs <= 1.9
+      .reduce((sum, entry) => sum + (entry.carbs || 0), 0);
+
+      setTotalCarbs(actualCarbs);
+      setProteinCarbs(proteinCarbs);
+      setTotalCarbLoad(actualCarbs + proteinCarbs);
+  
       // Calculate average carbs per day
       const daysInRange = range === '1w' ? 7 : range === '1m' ? 30 : range === '3m' ? 90 : 1;
-      setAverageCarbsPerDay(totalCarbsEaten / daysInRange);
-
-      // Calculate total insulin
-      // Calculate total basal insulin
-      const basalInsulin = treatmentData
-      .filter((entry) => 
-        (entry.eventType.toLowerCase().includes('basal') || entry.eventType.toLowerCase().includes('temp basal')) &&
-        entry.created_at // Ensure created_at exists
-      )
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) // Sort by start time
-      .reduce((total, entry, index, array) => {
-        if (!entry.created_at) {
-          console.warn(`Skipping entry with missing created_at:`, entry);
-          return total;
+      setAverageCarbsPerDay(actualCarbs / daysInRange);
+      setAverageCarbLoadPerDay((actualCarbs + proteinCarbs) / daysInRange);
+  
+      // Fetch basal profile
+      const fetchBasalProfile = async (): Promise<{ time: string; rate: number }[]> => {
+        const response = await fetch(`https://sharpy-cgm.up.railway.app/api/v1/profile.json`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch basal profile: ${response.status}`);
         }
-    
-        const startTime = new Date(entry.created_at).getTime();
-        const durationInHours = (entry.duration || 0) / 60; // Convert duration from minutes to hours
-        let endTime = startTime + durationInHours * 60 * 60 * 1000; // Calculate end time in milliseconds
-    
-        // Check if the next entry overlaps with the current one
-        if (index < array.length - 1) {
-          const nextStartTime = new Date(array[index + 1].created_at).getTime();
-          if (nextStartTime < endTime) {
-            // Adjust the duration to avoid overlap
-            const adjustedDurationInHours = (nextStartTime - startTime) / (60 * 60 * 1000);
-            const contribution = entry.rate * Math.max(adjustedDurationInHours, 0);
-            console.log(`Adjusted Entry: ${entry.created_at}, Rate: ${entry.rate}, Adjusted Duration: ${adjustedDurationInHours}, Contribution: ${contribution}`);
-            return total + contribution;
+        const profileData = await response.json();
+        return profileData[0]?.store?.Default || [];
+      };
+  
+      // Calculate basal insulin
+      const calculateBasalInsulin = async (treatmentData: TreatmentData[], startDate: Date, endDate: Date) => {
+        const basalProfile = await fetchBasalProfile();
+        let totalBasalInsulin = 0;
+  
+        // Sort Temp Basals by start time
+        const tempBasals = treatmentData
+          .filter((entry) => 
+            entry.eventType.toLowerCase().includes('temp basal') &&
+            entry.created_at && // Ensure created_at exists
+            entry.duration > 0 // Exclude entries with no duration
+          )
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  
+        // Iterate through the time range minute-by-minute
+        for (let currentTime = startDate.getTime(); currentTime < endDate.getTime(); currentTime += 60 * 1000) {
+          const activeTempBasal = tempBasals.find((entry) => {
+            const startTime = new Date(entry.created_at).getTime();
+            const endTime = startTime + (entry.duration || 0) * 60 * 1000;
+            return currentTime >= startTime && currentTime < endTime;
+          });
+  
+          // Determine the basal rate for the current time
+          let rate = 0;
+          if (activeTempBasal) {
+            rate = activeTempBasal.rate; // Use Temp Basal rate if active
+          } else {
+            // Use the basal profile rate
+            const currentMinutes = (currentTime - startDate.setUTCHours(0, 0, 0, 0)) / (60 * 1000);
+            const profileEntry = basalProfile.find((entry) => {
+              const profileMinutes = parseInt(entry.time.split(':')[0]) * 60 + parseInt(entry.time.split(':')[1]);
+              return currentMinutes >= profileMinutes;
+            });
+            rate = profileEntry ? profileEntry.rate : 0;
           }
+  
+          // Add the insulin contribution for this minute
+          totalBasalInsulin += rate / 60; // Convert hourly rate to per-minute contribution
         }
-    
-        // Add the insulin for the current entry
-        const contribution = entry.rate * durationInHours;
-        console.log(`Entry: ${entry.created_at}, Rate: ${entry.rate}, Duration: ${durationInHours}, Contribution: ${contribution}`);
-        return total + contribution;
-      }, 0);
-    
-    // Round the basal insulin to avoid floating-point inaccuracies
-    const roundedBasalInsulin = Math.round(basalInsulin * 100) / 100;
-
-        // Calculate total bolus insulin
-        const bolusInsulin = treatmentData
+  
+        // Round the total basal insulin to avoid floating-point inaccuracies
+        return Math.round(totalBasalInsulin * 100) / 100;
+      };
+  
+      const roundedBasalInsulin = await calculateBasalInsulin(treatmentData, startDate, now);
+  
+      // Calculate bolus insulin
+      const bolusInsulin = treatmentData
         .filter((entry) => 
-            entry.eventType.toLowerCase().includes('bolus') || 
-            entry.eventType.toLowerCase().includes('smb')
+          entry.eventType.toLowerCase().includes('bolus') || 
+          entry.eventType.toLowerCase().includes('smb')
         )
         .reduce((sum, entry) => sum + (entry.insulin || 0), 0);
-
-        // Round the bolus insulin to avoid floating-point inaccuracies
-        const roundedBolusInsulin = Math.round(bolusInsulin * 100) / 100;
-
-        // Set the total insulin and average daily insulin
-        setTotalInsulin({ basal: roundedBasalInsulin, bolus: roundedBolusInsulin });
-        setAverageDailyInsulin((roundedBasalInsulin + roundedBolusInsulin) / daysInRange);
-
-
+  
+      const roundedBolusInsulin = Math.round(bolusInsulin * 100) / 100;
+  
+      // Set the total insulin and average daily insulin
+      setTotalInsulin({ basal: roundedBasalInsulin, bolus: roundedBolusInsulin });
+      setAverageDailyInsulin((roundedBasalInsulin + roundedBolusInsulin) / daysInRange);
     } catch (error) {
       console.error('Error fetching statistics:', error);
     } finally {
       setLoading(false);
     }
   };
+      
 
   // Pie chart data
   const pieOptions = {
@@ -227,7 +250,23 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
 
   return (
     <div className="bg-white p-6 rounded-md shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Statistics</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Statistics</h2>
+        <a
+          href="https://sharpy-cgm.up.railway.app/report"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center space-x-2 hover:underline"
+        >
+          <img
+            src="nightscout.png"
+            alt="Nightscout Logo"
+            className="w-6 h-6"
+          />
+          <span className="text-blue-600 font-semibold">View Nightscout Report</span>
+        </a>
+      </div>
+
       <div className="flex justify-center mb-4 space-x-2">
         <button
           onClick={() => setRange('today')}
@@ -279,7 +318,8 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
           </thead>
           <tbody>
             <tr style={{ backgroundColor: '#DFF5E1' }}>
-              <td className="px-4 py-2 border border-gray-300">Time in Range 4.0 - 8.0 mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">Time in Range</td>
+              <td className="px-4 py-2 border border-gray-300">4.0 - 8.0 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeInRange.toFixed(1)}%`}
               </td>
@@ -295,20 +335,23 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
             </tr>
            
             <tr style={{ backgroundColor: '#FFE8CC' }}>
-              <td className="px-4 py-2 border border-gray-300">Time Above Range &gt;8.0mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">Time Above Range</td>
+              <td className="px-4 py-2 border border-gray-300">&gt;8.0 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeAboveRange.toFixed(1)}%`}
               </td>
             </tr>
             <tr style={{ backgroundColor: '#FFD6D6' }}>
-              <td className="px-4 py-2 border border-gray-300">Time Below Range &lt;4.0mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">Time Below Range</td>
+              <td className="px-4 py-2 border border-gray-300">&lt;4.0 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeBelowRange.toFixed(1)}%`}
               </td>
             </tr>
             
             <tr style={{ backgroundColor: '#DFF5E1' }}>
-              <td className="px-4 py-2 border border-gray-300">Time in Range 3.8 - 5.50mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">Time in Range</td>
+              <td className="px-4 py-2 border border-gray-300">3.8 - 5.5 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeInMyRange.toFixed(1)}%`}
               </td>
@@ -323,13 +366,15 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
               </td>
             </tr>
             <tr style={{ backgroundColor: '#FFE8CC' }}>
-              <td className="px-4 py-2 border border-gray-300">Time Above Range &gt;5.5.0mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">Time Above Range</td>
+              <td className="px-4 py-2 border border-gray-300">&gt;5.5 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeAboveMyRange.toFixed(1)}%`}
               </td>
             </tr>
             <tr style={{ backgroundColor: '#FFD6D6' }}>
-              <td className="px-4 py-2 border border-gray-300">Time Below Range %lt;3.8mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">Time Below Range</td>
+              <td className="px-4 py-2 border border-gray-300">&lt;3.8 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeBelowMyRange.toFixed(1)}%`}
               </td>
@@ -351,11 +396,31 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
                 {loading ? <Skeleton width={100} /> : `${totalCarbs.toFixed(2)} g`}
               </td>
             </tr>
+            <tr>
+              <td className="px-4 py-2 border border-gray-300">Protein/Fat Converted to Carbs (Gluconeogenesis)</td>
+              <td className="px-4 py-2 border border-gray-300">
+                {loading ? <Skeleton width={100} /> : `${proteinCarbs.toFixed(2)}g`}
+              </td>
+            </tr>
+            <tr>
+              <td className="px-4 py-2 border border-gray-300">Total Carb Load</td>
+              <td className="px-4 py-2 border border-gray-300">
+                {loading ? <Skeleton width={100} /> : `${totalCarbLoad.toFixed(2)}g`}
+              </td>
+            </tr>
             {['1w', '1m', '3m'].includes(range) && (
               <tr>
-                <td className="px-4 py-2 border border-gray-300">Average Carbs Per Day</td>
+                <td className="px-4 py-2 border border-gray-300">Average Carbs Eaten Per Day</td>
                 <td className="px-4 py-2 border border-gray-300">
                   {loading ? <Skeleton width={100} /> : `${averageCarbsPerDay.toFixed(2)} g/day`}
+                </td>
+              </tr>
+            )}
+            {['1w', '1m', '3m'].includes(range) && (
+              <tr>
+                <td className="px-4 py-2 border border-gray-300">Average Carb Load Per Day</td>
+                <td className="px-4 py-2 border border-gray-300">
+                  {loading ? <Skeleton width={100} /> : `${averageCarbLoadPerDay.toFixed(2)} g/day`}
                 </td>
               </tr>
             )}
