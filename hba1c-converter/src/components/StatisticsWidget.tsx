@@ -17,6 +17,9 @@ interface TreatmentData {
   insulin: number; // Insulin amount in units
   carbs: number; // Carbohydrates in grams
   dateString: string; // Timestamp
+  created_at: string; // Timestamp when the treatment was created
+  duration?: number; // Duration in minutes (optional, for temp basal)
+  rate?: number; // Basal rate in units per hour (optional, for temp basal)
 }
 
 interface StatisticsWidgetProps {
