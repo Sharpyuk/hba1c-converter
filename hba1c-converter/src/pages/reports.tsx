@@ -2,11 +2,25 @@ import React, { useState, useEffect } from 'react';
 import StatisticsWidget from '../components/StatisticsWidget';
 import AGPGraph from '../components/AGPGraph';
 import PercentileWidget from '../components/PercentileWidget';
+import CarbsChart from '../components/CarbsChart';
 
 const Reports: React.FC = () => {
   const [range, setRange] = useState<string>('today');
   const [loading, setLoading] = useState<boolean>(false);
   const [graphData, setGraphData] = useState<any[]>([]);
+  const [carbsData, setCarbsData] = useState<{ time: string; carbs: number }[]>([]);
+
+  useEffect(() => {
+    // Fetch carbs data based on the selected range
+    const fetchCarbsData = async () => {
+      // Simulated API call to fetch carbs data
+      const response = await fetch(`/api/carbs?range=${range}`);
+      const data = await response.json();
+      setCarbsData(data);
+    };
+
+    fetchCarbsData();
+  }, [range]);
 
   const fetchGraphData = async (range: string) => {
     try {
@@ -57,9 +71,7 @@ const Reports: React.FC = () => {
       <h1 className="text-2xl font-bold text-center mb-6">Diabetes Report</h1>
       <StatisticsWidget range={range} setRange={setRange} loading={loading} setLoading={setLoading} />
       <AGPGraph range={range} graphData={graphData} />
-      <div className="flex justify-center mt-6">
-        <PercentileWidget range={range} />
-      </div>
+      <CarbsChart range={range} carbsData={carbsData} />
     </div>
   );
 };

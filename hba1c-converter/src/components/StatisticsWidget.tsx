@@ -93,9 +93,9 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       const totalReadings = bloodSugarData.length;
   
       // Calculate TIR, TAR, and TBR as percentages
-      const inRange = bloodSugarData.filter((entry) => entry.sgv / 18 >= 4 && entry.sgv / 18 <= 8).length;
-      const aboveRange = bloodSugarData.filter((entry) => entry.sgv / 18 > 8).length;
-      const belowRange = bloodSugarData.filter((entry) => entry.sgv / 18 < 4).length;
+      const inRange = bloodSugarData.filter((entry) => entry.sgv / 18 >= 3.9 && entry.sgv / 18 <= 10).length;
+      const aboveRange = bloodSugarData.filter((entry) => entry.sgv / 18 > 10).length;
+      const belowRange = bloodSugarData.filter((entry) => entry.sgv / 18 < 3.9).length;
   
       // Calculate TIR, TAR, and TBR as percentages for MY RANGE
       const inMyRange = bloodSugarData.filter((entry) => entry.sgv / 18 >= 4 && entry.sgv / 18 <= 5.5).length;
@@ -124,19 +124,44 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       // Log the treatment data to the console
       console.log('Fetched Treatment Data:', treatmentData);
   
-      // Calculate total carbs
-      const actualCarbs = treatmentData
-      .filter((entry) => entry.eventType === 'Carb Correction' && entry.carbs > 1.9) // Filter for "Carb Correction" and carbs > 1.9
+      // Calculate protein/fat converted carbs (Gluconeogenesis)
+      const proteinCarbs = treatmentData
+      .filter((entry, index, array) => {
+        // Check if the entry is a duplicate (same carbs value) within a 10-minute interval
+        const entryTime = new Date(entry.created_at).getTime();
+        return array.some((otherEntry) => {
+          const otherTime = new Date(otherEntry.created_at).getTime();
+          return (
+            entry.eventType === 'Carb Correction' && // Ensure it's a "Carb Correction"
+            entry.carbs === otherEntry.carbs && // Same carbs value
+            otherTime > entryTime && // Other entry is after the current entry
+            otherTime <= entryTime + 10 * 60 * 1000 // Within 10 minutes
+          );
+        });
+      })
       .reduce((sum, entry) => sum + (entry.carbs || 0), 0);
 
-      const proteinCarbs = treatmentData
-      .filter((entry) => entry.eventType === 'Carb Correction' && entry.carbs <= 1.9) // Filter for "Carb Correction" and carbs <= 1.9
+      // Calculate actual carbs (excluding protein/fat converted carbs)
+      const actualCarbs = treatmentData
+      .filter((entry, index, array) => {
+        // Exclude entries that are part of the proteinCarbs calculation
+        const entryTime = new Date(entry.created_at).getTime();
+        const isProteinCarb = array.some((otherEntry) => {
+          const otherTime = new Date(otherEntry.created_at).getTime();
+          return (
+            entry.eventType === 'Carb Correction' && // Ensure it's a "Carb Correction"
+            entry.carbs === otherEntry.carbs && // Same carbs value
+            otherTime > entryTime && // Other entry is after the current entry
+            otherTime <= entryTime + 10 * 60 * 1000 // Within 10 minutes
+          );
+        });
+        return entry.eventType === 'Carb Correction' && entry.carbs > 1.9 && !isProteinCarb;
+      })
       .reduce((sum, entry) => sum + (entry.carbs || 0), 0);
 
       setTotalCarbs(actualCarbs);
       setProteinCarbs(proteinCarbs);
       setTotalCarbLoad(actualCarbs + proteinCarbs);
-  
       // Calculate average carbs per day
       const daysInRange = range === '1w' ? 7 : range === '1m' ? 30 : range === '3m' ? 90 : 1;
       setAverageCarbsPerDay(actualCarbs / daysInRange);
@@ -316,13 +341,13 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
         <table className="table-auto w-full text-left border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100 col-span-3">
-              <th className="px-4 py-2 border border-gray-300"  colSpan={3}>Time in Range</th>
+              <th className="px-4 py-2 border border-gray-300"  colSpan={4}>Time in Range (Internationally Recognised Range)</th>
             </tr>
           </thead>
           <tbody>
             <tr style={{ backgroundColor: '#DFF5E1' }}>
               <td className="px-4 py-2 border border-gray-300">Time in Range</td>
-              <td className="px-4 py-2 border border-gray-300">4.0 - 8.0 mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">3.9 - 10 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeInRange.toFixed(1)}%`}
               </td>
@@ -336,22 +361,30 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
                 )}
               </td>
             </tr>
-           
+            
             <tr style={{ backgroundColor: '#FFE8CC' }}>
               <td className="px-4 py-2 border border-gray-300">Time Above Range</td>
-              <td className="px-4 py-2 border border-gray-300">&gt;8.0 mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">&gt;10 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeAboveRange.toFixed(1)}%`}
               </td>
             </tr>
             <tr style={{ backgroundColor: '#FFD6D6' }}>
               <td className="px-4 py-2 border border-gray-300">Time Below Range</td>
-              <td className="px-4 py-2 border border-gray-300">&lt;4.0 mmol/l</td>
+              <td className="px-4 py-2 border border-gray-300">&lt;3.9 mmol/l</td>
               <td className="px-4 py-2 border border-gray-300">
                 {loading ? <Skeleton width={100} /> : `${timeBelowRange.toFixed(1)}%`}
               </td>
             </tr>
-            
+          </tbody>
+        </table>
+        <table className="table-auto w-full text-left border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100 col-span-3">
+              <th className="px-4 py-2 border border-gray-300"  colSpan={4}>Time in Range (My Desired Range)</th>
+            </tr>
+          </thead>
+          <tbody>
             <tr style={{ backgroundColor: '#DFF5E1' }}>
               <td className="px-4 py-2 border border-gray-300">Time in Range</td>
               <td className="px-4 py-2 border border-gray-300">3.8 - 5.5 mmol/l</td>
