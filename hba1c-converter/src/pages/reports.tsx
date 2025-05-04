@@ -3,6 +3,7 @@ import StatisticsWidget from '../components/StatisticsWidget';
 import AGPGraph from '../components/AGPGraph';
 import PercentileWidget from '../components/PercentileWidget';
 import CarbsChart from '../components/CarbsChart';
+import Layout from '../components/Layout';
 
 const Reports: React.FC = () => {
   const [range, setRange] = useState<string>('today');
@@ -67,12 +68,14 @@ const Reports: React.FC = () => {
   }, [range]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <h1 className="text-2xl font-bold text-center mb-6">Diabetes Report</h1>
-      <StatisticsWidget range={range} setRange={setRange} loading={loading} setLoading={setLoading} />
-      <AGPGraph range={range} graphData={graphData} />
-      <CarbsChart range={range} carbsData={carbsData} />
-    </div>
+    <Layout>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <h1 className="text-2xl font-bold text-center mb-6">Diabetes Report</h1>
+        <StatisticsWidget range={range} setRange={setRange} loading={loading} setLoading={setLoading} />
+        <AGPGraph range={range} graphData={graphData} />
+        <CarbsChart range={range} carbsData={carbsData} />
+      </div>
+    </Layout>
   );
 };
 

@@ -1,3 +1,3 @@
 module.exports = {
-  reactStrictMode: true,
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'], // Ensure TypeScript files are recognized
 };

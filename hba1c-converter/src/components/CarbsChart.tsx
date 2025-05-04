@@ -7,6 +7,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 interface CarbsChartProps {
   range: string; // Current date range (e.g., 'today', 'yesterday', '1w', '1m', '3m')
+  carbsData: { time: string; carbs: number }[];
 }
 
 const CarbsChart: React.FC<CarbsChartProps> = ({ range }) => {
