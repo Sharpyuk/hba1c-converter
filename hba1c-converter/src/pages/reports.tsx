@@ -4,6 +4,7 @@ import AGPGraph from '../components/AGPGraph';
 import PercentileWidget from '../components/PercentileWidget';
 import CarbsChart from '../components/CarbsChart';
 import Layout from '../components/Layout';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const Reports: React.FC = () => {
   const [range, setRange] = useState<string>('today');
@@ -69,11 +70,21 @@ const Reports: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 p-6">
-        <h1 className="text-2xl font-bold text-center mb-6">Diabetes Report</h1>
-        <StatisticsWidget range={range} setRange={setRange} loading={loading} setLoading={setLoading} />
-        <AGPGraph range={range} graphData={graphData} />
-        <CarbsChart range={range} carbsData={carbsData} />
+      <div className="min-h-screen bg-gray-50 pt-20 px-4 sm:px-6 lg:px-8">
+        {/* StatisticsWidget */}
+        <div className="mb-6 w-full max-w-screen-sm mx-auto">
+          <StatisticsWidget range={range} setRange={setRange} loading={loading} setLoading={setLoading} />
+        </div>
+
+        {/* AGPGraph */}
+        <div className="mb-6 w-full max-w-screen-sm mx-auto">
+          <AGPGraph range={range} graphData={graphData} />
+        </div>
+
+        {/* CarbsChart */}
+        <div className="mb-6 w-full max-w-screen-sm mx-auto">
+          <CarbsChart range={range} carbsData={carbsData} />
+        </div>
       </div>
     </Layout>
   );

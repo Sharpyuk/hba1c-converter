@@ -21,6 +21,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.4",
     "@tailwindcss/vite": "^4.1.4",
+    "@vercel/speed-insights": "^1.2.0",
     "ag-charts-community": "^11.2.4",
     "ag-charts-enterprise": "^11.2.4",
     "ag-charts-react": "^11.2.4",

@@ -36,7 +36,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </nav>
 
       {/* Page Content */}
-      <main className="container mx-auto p-6 pt-20">{children}</main>
+      <main className="p-6 pt-20 w-full">{children}</main>
     </div>
   );
 };
