@@ -8,7 +8,7 @@ import GMI from '../components/GMI';
 const Home = () => {
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 pt-20 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 pt-20 sm:px-6 lg:px-8 w-full">
         {/* BloodSugarWidget */}
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <BloodSugarWidget />

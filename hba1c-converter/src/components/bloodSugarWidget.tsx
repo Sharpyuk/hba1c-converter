@@ -167,7 +167,7 @@ const BloodSugarWidget: React.FC = () => {
   };
 
   return (
-    <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center`}>
+    <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center w-full`}>
   {error ? (
     <p>Error: {error}</p>
   ) : bloodSugar !== null ? (

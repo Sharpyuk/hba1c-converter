@@ -70,7 +70,7 @@ const Reports: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 pt-20 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 pt-15 sm:px-6 lg:px-8">
         {/* StatisticsWidget */}
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <StatisticsWidget range={range} setRange={setRange} loading={loading} setLoading={setLoading} />
