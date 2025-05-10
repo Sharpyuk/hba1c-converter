@@ -32,7 +32,7 @@ const About = () => (
         {/* About Me Text */}
         <div className="flex-1">
           <h1 className="text-3xl font-bold mb-2 text-blue-700">About Me</h1>
-          <p className="mb-4 text-gray-700">
+          <p className=" text-gray-700">
             Hi, I’m Craig Sharpe, a Lead Engineer based in South Yorkshire with over 25 years of experience in IT, primarily within the financial services sector. My passion is building robust, scalable systems—especially using Golang and cloud-native technologies.
           </p>
           
@@ -42,7 +42,7 @@ const About = () => (
       <p className="mb-4 text-gray-700">
             I specialise in designing and deploying distributed microservices, automating infrastructure, and driving DevOps best practices. I thrive on solving complex problems, whether that’s architecting event-driven platforms, modernising legacy systems, or ensuring reliability at scale.
           </p>
-          <p className="mb-4 text-gray-700">
+          <p className="mb-8 text-gray-700">
             As a technical leader, I enjoy mentoring engineers, fostering collaboration, and creating a culture of innovation and continuous improvement. I believe in clear communication and making technology accessible to everyone—technical or not.
           </p>
 
