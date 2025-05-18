@@ -1,0 +1,47 @@
+{
+  "name": "hba1c-converter",
+  "version": "1.0.0",
+  "description": "A web application to convert HbA1c values between percentage and mmol/mol.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "HbA1c",
+    "conversion",
+    "health",
+    "Next.js",
+    "React"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.4",
+    "@tailwindcss/vite": "^4.1.4",
+    "@vercel/speed-insights": "^1.2.0",
+    "ag-charts-community": "^11.2.4",
+    "ag-charts-enterprise": "^11.2.4",
+    "ag-charts-react": "^11.2.4",
+    "chart.js": "^4.4.9",
+    "cubic-spline": "^3.0.3",
+    "next": "^15.3.1",
+    "next-auth": "^4.24.11",
+    "react": "^19.1.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.1.0",
+    "react-loading-skeleton": "^3.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.2",
+    "@types/react": "19.1.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "latest"
+  }
+}
