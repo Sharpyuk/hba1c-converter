@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, signIn } from "next-auth/react";
 import Link from "next/link";
 
 export default function Layout({ children }) {
@@ -33,7 +33,7 @@ export default function Layout({ children }) {
             </Link>
           </div>
 
-          {/* Right Side: About Me or User Info/Sign Out */}
+          {/* Right Side: Sign In/Sign Out */}
           <div className="flex items-center">
             {session ? (
               <>
@@ -48,12 +48,12 @@ export default function Layout({ children }) {
                 </button>
               </>
             ) : (
-              <Link
-                href="/about"
+              <button
+                onClick={() => signIn("google")}
                 className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
               >
-                About Me
-              </Link>
+                Sign in
+              </button>
             )}
           </div>
         </div>
@@ -63,5 +63,4 @@ export default function Layout({ children }) {
       <main className="sm:px-0 lg:px-6 pt-8 w-full">{children}</main>
     </div>
   );
-};
-
+}

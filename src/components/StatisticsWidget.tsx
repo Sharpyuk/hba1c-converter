@@ -75,9 +75,9 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
         startDate.setUTCMonth(now.getUTCMonth() - 3);
       }
   
-      console.log('Range:', range);
-      console.log('Start Date (UTC):', startDate.toISOString());
-      console.log('End Date (UTC):', now.toISOString());
+      // console.log('Range:', range);
+      // console.log('Start Date (UTC):', startDate.toISOString());
+      // console.log('End Date (UTC):', now.toISOString());
   
       // Fetch blood sugar data for TIR, TAR, and TBR
       const entriesQuery = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
@@ -122,7 +122,7 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       const treatmentData: TreatmentData[] = await treatmentsResponse.json();
   
       // Log the treatment data to the console
-      console.log('Fetched Treatment Data:', treatmentData);
+      //console.log('Fetched Treatment Data:', treatmentData);
   
       // Calculate protein/fat converted carbs (Gluconeogenesis)
       const proteinCarbs = treatmentData

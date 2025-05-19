@@ -38,7 +38,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     );
 
     // Debug: Check carb corrections
-    console.log('Carb Corrections:', carbCorrections);
+    //console.log('Carb Corrections:', carbCorrections);
 
     // Define a slower absorption rate and longer duration
     const absorptionRate = 10; // grams per hour (adjusted for slower burn-down)
@@ -62,7 +62,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     });
 
     // Debug: Check grouped corrections
-    console.log('Grouped Corrections:', groupedCorrections);
+    //console.log('Grouped Corrections:', groupedCorrections);
 
     // Initialize a full-day timeline from 00:00 to 23:59
     const timeline: { time: string; carbs: number }[] = [];
@@ -91,7 +91,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     });
 
     // Debug: Check processed data
-    console.log('Processed Data:', processedData);
+    //console.log('Processed Data:', processedData);
 
     // Aggregate carbs by time (to handle overlapping entries)
     const aggregatedData = processedData.reduce((acc: any, curr) => {
@@ -105,7 +105,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }, []);
 
     // Debug: Check aggregated data
-    console.log('Aggregated Data:', aggregatedData);
+    //console.log('Aggregated Data:', aggregatedData);
 
     // Merge aggregated data into the full-day timeline
     const finalData = timeline.map((slot) => {
@@ -117,7 +117,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     });
 
     // Debug: Check final data
-    console.log('Final Data:', finalData);
+    //console.log('Final Data:', finalData);
 
     res.status(200).json(finalData);
   } catch (error) {

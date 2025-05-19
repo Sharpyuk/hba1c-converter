@@ -9,7 +9,9 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
+ChartJS.register(annotationPlugin);
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface BloodSugarData {
@@ -25,6 +27,7 @@ const BloodSugarWidget: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<BloodSugarData[]>([]);
   const [range, setRange] = useState<string>('3h'); // Default range is 3 hours
+  const [zoom, setZoom] = useState<boolean>(false); // Default to un-checked (no zoom)
 
   const fetchBloodSugar = async () => {
     try {
@@ -67,17 +70,14 @@ const BloodSugarWidget: React.FC = () => {
   };
 
   useEffect(() => {
-    // Fetch data immediately on component mount
     fetchBloodSugar();
     fetchGraphData();
 
-    // Set up an interval to fetch data every 60 seconds
     const interval = setInterval(() => {
       fetchBloodSugar();
       fetchGraphData();
     }, 60000);
 
-    // Clean up the interval when the component unmounts
     return () => clearInterval(interval);
   }, [range]);
 
@@ -108,11 +108,11 @@ const BloodSugarWidget: React.FC = () => {
   };
 
   const getBackgroundColor = (mmolL: number | null): string => {
-    if (mmolL === null) return 'bg-gray-500'; // Default background color for loading or error
-    if (mmolL >= 4.0 && mmolL <= 5.5) return 'bg-green-500'; // Green for normal range
-    if ((mmolL > 5.5 && mmolL <= 6.5) || (mmolL >= 3.7 && mmolL < 4.0)) return 'bg-orange-500'; // Orange for slightly high/low
-    if (mmolL < 3.7 || mmolL > 6.5) return 'bg-red-500'; // Red for critical range
-    return 'bg-gray-500'; // Fallback color
+    if (mmolL === null) return 'bg-gray-500';
+    if (mmolL >= 4.0 && mmolL <= 5.5) return 'bg-green-500';
+    if ((mmolL > 5.5 && mmolL <= 6.5) || (mmolL >= 3.7 && mmolL < 4.0)) return 'bg-orange-500';
+    if (mmolL < 3.7 || mmolL > 6.5) return 'bg-red-500';
+    return 'bg-gray-500';
   };
 
   const mmolL = convertToMmolL(bloodSugar);
@@ -121,19 +121,19 @@ const BloodSugarWidget: React.FC = () => {
     labels: graphData.map((entry) => {
       const date = new Date(entry.dateString);
       if (range === '3h' || range === '12h' || range === '1d') {
-        // Display only the time for shorter ranges
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       } else {
-        // Display both date and time for longer ranges
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + 
-               ' ' + 
-               date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return (
+          date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+          ' ' +
+          date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        );
       }
     }),
     datasets: [
       {
         label: 'Blood Sugar (mmol/L)',
-        data: graphData.map((entry) => convertToMmolL(entry.sgv)), // Convert to mmol/L
+        data: graphData.map((entry) => convertToMmolL(entry.sgv)),
         borderColor: 'rgba(75, 192, 192, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         tension: 0.4,
@@ -143,10 +143,44 @@ const BloodSugarWidget: React.FC = () => {
 
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: false, // Allow custom height and width
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,
+      },
+      annotation: {
+        annotations: {
+          lowerRange: {
+            type: 'line',
+            yMin: 3.8,
+            yMax: 3.8,
+            borderColor: 'red',
+            borderWidth: 2,
+            borderDash: [6, 6], // Dotted line
+            label: {
+              content: '3.8 mmol (Low)',
+              enabled: true,
+              position: 'start',
+              backgroundColor: 'rgba(255, 0, 0, 0.5)',
+              color: 'white',
+            },
+          },
+          upperRange: {
+            type: 'line',
+            yMin: 5.5,
+            yMax: 5.5,
+            borderColor: 'orange',
+            borderWidth: 2,
+            borderDash: [6, 6], // Dotted line
+            label: {
+              content: '5.5 mmol (Target)',
+              enabled: true,
+              position: 'start',
+              backgroundColor: 'rgba(255, 165, 0, 0.5)',
+              color: 'white',
+            },
+          },
+        },
       },
     },
     scales: {
@@ -162,74 +196,86 @@ const BloodSugarWidget: React.FC = () => {
           text: 'Blood Sugar (mmol/L)',
         },
         beginAtZero: false,
+        min: zoom ? undefined : 3, // Fixed minimum when zoom is off
+        max: zoom ? undefined : 15, // Fixed maximum when zoom is off
       },
     },
   };
 
   return (
     <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center w-full`}>
-  {error ? (
-    <p>Error: {error}</p>
-  ) : bloodSugar !== null ? (
-    <div>
-      <p className="text-lg font-bold">
-        Current Blood Sugar: <br />{' '}
-        <span className="text-4xl">
-          {mmolL} mmol/L {getTrendArrow(trend)}
-        </span>
-      </p>
-      <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
-      <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
-        <Line data={chartData} options={chartOptions} />
-      </div>
-      {/* Add margin between the graph and the buttons */}
-      <div className="flex justify-center mt-6 space-x-4">
-        <button
-          onClick={() => setRange('3h')}
-          className={`px-4 py-2 rounded-md font-semibold ${
-            range === '3h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-          } hover:bg-blue-500 hover:text-white transition`}
-        >
-          3 Hours
-        </button>
-        <button
-          onClick={() => setRange('12h')}
-          className={`px-4 py-2 rounded-md font-semibold ${
-            range === '12h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-          } hover:bg-blue-500 hover:text-white transition`}
-        >
-          12 Hours
-        </button>
-        <button
-          onClick={() => setRange('1d')}
-          className={`px-4 py-2 rounded-md font-semibold ${
-            range === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-          } hover:bg-blue-500 hover:text-white transition`}
-        >
-          1 Day
-        </button>
-        <button
-          onClick={() => setRange('3d')}
-          className={`px-4 py-2 rounded-md font-semibold ${
-            range === '3d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-          } hover:bg-blue-500 hover:text-white transition`}
-        >
-          3 Days
-        </button>
-        <button
-          onClick={() => setRange('1w')}
-          className={`px-4 py-2 rounded-md font-semibold ${
-            range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-          } hover:bg-blue-500 hover:text-white transition`}
-        >
-          1 Week
-        </button>
-      </div>
+      {error ? (
+        <p>Error: {error}</p>
+      ) : bloodSugar !== null ? (
+        <div>
+          <p className="text-lg font-bold">
+            Current Blood Sugar: <br />{' '}
+            <span className="text-4xl">
+              {mmolL} mmol/L {getTrendArrow(trend)}
+            </span>
+          </p>
+          <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
+          <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
+            <Line data={chartData} options={chartOptions} />
+          </div>
+          <div className="flex justify-center mt-6 space-x-4">
+            <button
+              onClick={() => setRange('3h')}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                range === '3h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+              } hover:bg-blue-500 hover:text-white transition`}
+            >
+              3 Hours
+            </button>
+            <button
+              onClick={() => setRange('12h')}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                range === '12h' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+              } hover:bg-blue-500 hover:text-white transition`}
+            >
+              12 Hours
+            </button>
+            <button
+              onClick={() => setRange('1d')}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                range === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+              } hover:bg-blue-500 hover:text-white transition`}
+            >
+              1 Day
+            </button>
+            <button
+              onClick={() => setRange('3d')}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                range === '3d' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+              } hover:bg-blue-500 hover:text-white transition`}
+            >
+              3 Days
+            </button>
+            <button
+              onClick={() => setRange('1w')}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+              } hover:bg-blue-500 hover:text-white transition`}
+            >
+              1 Week
+            </button>
+          </div>
+          <div className="mt-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={zoom}
+                onChange={(e) => setZoom(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+              <span className="text-sm">Zoom</span>
+            </label>
+          </div>
+        </div>
+      ) : (
+        <p>Loading...</p>
+      )}
     </div>
-  ) : (
-    <p>Loading...</p>
-  )}
-</div>
   );
 };
 
