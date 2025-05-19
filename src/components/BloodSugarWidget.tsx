@@ -8,6 +8,7 @@ import {
   LinearScale,
   Tooltip,
   Legend,
+  ChartOptions,
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 
@@ -141,7 +142,7 @@ const BloodSugarWidget: React.FC = () => {
     ],
   };
 
-  const chartOptions = {
+  const chartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -164,7 +165,7 @@ const BloodSugarWidget: React.FC = () => {
               backgroundColor: 'rgba(255, 0, 0, 0.5)',
               color: 'white',
             },
-          },
+          } as any, // Explicitly cast to `any` if type inference fails
           upperRange: {
             type: 'line',
             yMin: 5.5,
@@ -179,7 +180,7 @@ const BloodSugarWidget: React.FC = () => {
               backgroundColor: 'rgba(255, 165, 0, 0.5)',
               color: 'white',
             },
-          },
+          } as any, // Explicitly cast to `any` if type inference fails
         },
       },
     },
