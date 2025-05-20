@@ -1,14 +1,38 @@
-// pages/api/auth/[...nextauth].js
-import NextAuth from "next-auth"
-import GoogleProvider from "next-auth/providers/google"
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { query } from "../../../utils/db";
 
 export default NextAuth({
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  callbacks: {
+    async session({ session, user }) {
+      // Attach the user ID to the session object
+      const dbUser = await query("SELECT id FROM user_settings WHERE user_id = $1", [session.user.email]);
+      if (dbUser.rows.length > 0) {
+        session.user.id = dbUser.rows[0].id;
+      } else {
+        session.user.id = null;
+      }
+      return session;
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      // Check if the user exists in the database
+      const existingUser = await query("SELECT * FROM user_settings WHERE user_id = $1", [user.email]);
 
-})
+      if (existingUser.rows.length === 0) {
+        // If the user doesn't exist, create a new record
+        await query("INSERT INTO user_settings (user_id, nightscout_address) VALUES ($1, $2)", [
+          user.email,
+          "", // Default Nightscout address (empty)
+        ]);
+      }
+    },
+  },
+});

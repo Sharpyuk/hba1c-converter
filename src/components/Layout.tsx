@@ -1,13 +1,28 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSession, signOut, signIn } from "next-auth/react";
 import Link from "next/link";
+import { Bars3Icon, ArrowRightCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Layout({ children }) {
   const [isMounted, setIsMounted] = useState(false);
   const { data: session } = useSession();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
+
+    // Close dropdown on outside click
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   if (!isMounted) return null;
@@ -33,27 +48,56 @@ export default function Layout({ children }) {
             </Link>
           </div>
 
-          {/* Right Side: Sign In/Sign Out */}
-          <div className="flex items-center">
+          {/* Right Side: Login or Dropdown Menu */}
+          <div className="relative" ref={dropdownRef}>
             {session ? (
               <>
-                <span className="mr-4">
-                  Signed in as {session.user?.name || session.user?.email}
-                </span>
+                {/* Burger Menu for Logged-In Users */}
                 <button
-                  onClick={() => signOut()}
-                  className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  aria-expanded={dropdownOpen}
+                  className="flex items-center space-x-2 px-3 py-2 rounded hover:bg-purple-200 transition duration-300 ease-in-out"
                 >
-                  Sign out
+                  <Bars3Icon className="h-6 w-6 text-white" />
                 </button>
+                {dropdownOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-lg shadow-lg"
+                    role="menu"
+                  >
+                    <div className="px-4 py-2 border-b">
+                      <p className="text-sm font-semibold text-gray-700">
+                        Logged in as {session.user?.name || session.user?.email}
+                      </p>
+                    </div>
+                    <Link
+                      href="/settings"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-200 rounded transition duration-200"
+                      role="menuitem"
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      onClick={() => signOut()}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 bg-white hover:bg-purple-200 rounded transition duration-200 focus:outline-none"
+                      role="menuitem"
+                    >
+                      <b>Logout</b>
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
-              <button
-                onClick={() => signIn("google")}
-                className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
-              >
-                Sign in
-              </button>
+              <>
+                {/* Login Button for Logged-Out Users */}
+                <button
+                  onClick={() => signIn("google")}
+                  className="flex items-center space-x-2 px-3 py-2 rounded hover:bg-purple-200 transition duration-300 ease-in-out"
+                >
+                  <ArrowRightCircleIcon className="h-6 w-6 text-white" />
+                  <span className="text-sm font-semibold">Login</span>
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -7,7 +7,7 @@ import {
 
 const ConverterForm: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
-  const [conversionType, setConversionType] = useState('percentToMmolMol');
+  const [conversionType, setConversionType] = useState('mmolMolToPercent');
   const [result, setResult] = useState<number | null>(null);
   const [averageGlucose, setAverageGlucose] = useState<number | null>(null);
 
@@ -31,7 +31,7 @@ const ConverterForm: React.FC = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto mt-10 p-6 bg-white shadow-md rounded-lg">
+    <div className="max-w-lg mx-auto mt-4 p-6 bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
         HbA1c Converter
       </h2>

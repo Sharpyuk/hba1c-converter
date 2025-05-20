@@ -151,36 +151,44 @@ const BloodSugarWidget: React.FC = () => {
       },
       annotation: {
         annotations: {
-          lowerRange: {
-            type: 'line',
-            yMin: 3.8,
-            yMax: 3.8,
-            borderColor: 'red',
-            borderWidth: 2,
-            borderDash: [6, 6], // Dotted line
-            label: {
-              content: '3.8 mmol (Low)',
-              enabled: true,
-              position: 'start',
-              backgroundColor: 'rgba(255, 0, 0, 0.5)',
-              color: 'white',
-            },
-          } as any, // Explicitly cast to `any` if type inference fails
-          upperRange: {
-            type: 'line',
-            yMin: 5.5,
-            yMax: 5.5,
-            borderColor: 'orange',
-            borderWidth: 2,
-            borderDash: [6, 6], // Dotted line
-            label: {
-              content: '5.5 mmol (Target)',
-              enabled: true,
-              position: 'start',
-              backgroundColor: 'rgba(255, 165, 0, 0.5)',
-              color: 'white',
-            },
-          } as any, // Explicitly cast to `any` if type inference fails
+          ...(graphData.some((entry) => convertToMmolL(entry.sgv) !== null && convertToMmolL(entry.sgv)! < 3.8)
+            ? {
+                lowerRange: {
+                  type: 'line',
+                  yMin: 3.8,
+                  yMax: 3.8,
+                  borderColor: 'red',
+                  borderWidth: 2,
+                  borderDash: [6, 6], // Dotted line
+                  label: {
+                    content: '3.8 mmol (Low)',
+                    enabled: true,
+                    position: 'start',
+                    backgroundColor: 'rgba(255, 0, 0, 0.5)',
+                    color: 'white',
+                  },
+                },
+              }
+            : {}),
+          ...(graphData.some((entry) => convertToMmolL(entry.sgv) !== null && convertToMmolL(entry.sgv)! < 5.5)
+            ? {
+                upperRange: {
+                  type: 'line',
+                  yMin: 5.5,
+                  yMax: 5.5,
+                  borderColor: 'orange',
+                  borderWidth: 2,
+                  borderDash: [6, 6], // Dotted line
+                  label: {
+                    content: '5.5 mmol (Target)',
+                    enabled: true,
+                    position: 'start',
+                    backgroundColor: 'rgba(255, 165, 0, 0.5)',
+                    color: 'white',
+                  },
+                },
+              }
+            : {}),
         },
       },
     },
