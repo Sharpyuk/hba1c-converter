@@ -28,7 +28,7 @@ const GMI: React.FC = () => {
 
       const query = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
       const response = await fetch(
-        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?${query}&count=10000`
+        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?${query}&count=100000`
       );
 
       if (!response.ok) {
@@ -56,16 +56,31 @@ const GMI: React.FC = () => {
         return;
       }
 
+      // // Calculate mean glucose in mmol/L
+      // const mean = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+      // setMeanGlucose(mean);
+
+      // // Calculate GMI
+      // const gmiMmol = 12.71 + 4.70587 * mean;
+      // const gmiPercentage = gmiMmol / 10.929 + 2.15; // Convert mmol/mol to percentage
+      // setGmi({
+      //   mmol: gmiMmol.toFixed(1),
+      //   percentage: gmiPercentage.toFixed(1),
+      // });
+
+      // ...existing code...
       // Calculate mean glucose in mmol/L
       const mean = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
       setMeanGlucose(mean);
 
-      // Calculate GMI
-      const gmiMmol = 12.71 + 4.70587 * mean;
-      const gmiPercentage = gmiMmol / 10.929 + 2.15; // Convert mmol/mol to percentage
+      // Calculate A1c using the Nathan formula (same as Nightscout)
+      const meanMgdl = mean * 18;
+      const a1cPercent = (meanMgdl + 46.7) / 28.7;
+      const a1cMmol = (a1cPercent - 2.15) * 10.929;
+
       setGmi({
-        mmol: gmiMmol.toFixed(1),
-        percentage: gmiPercentage.toFixed(1),
+        mmol: a1cMmol.toFixed(1),
+        percentage: a1cPercent.toFixed(1),
       });
 
       setLoading(false);
