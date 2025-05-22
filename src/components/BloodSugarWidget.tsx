@@ -138,6 +138,8 @@ const BloodSugarWidget: React.FC = () => {
         borderColor: 'rgba(75, 192, 192, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         tension: 0.4,
+        pointRadius: range === '3h' ? 3 : 0, // Show dots only for 3h
+        pointHoverRadius: range === '3h' ? 6 : 0, // Optional: show hover effect only for 3h
       },
     ],
   };
