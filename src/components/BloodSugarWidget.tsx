@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSession } from "next-auth/react"; 
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -21,6 +22,9 @@ interface BloodSugarData {
   direction: string; // Trend direction
 }
 
+const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
+
+
 const BloodSugarWidget: React.FC = () => {
   const [bloodSugar, setBloodSugar] = useState<number | null>(null);
   const [timestamp, setTimestamp] = useState<string | null>(null);
@@ -29,10 +33,34 @@ const BloodSugarWidget: React.FC = () => {
   const [graphData, setGraphData] = useState<BloodSugarData[]>([]);
   const [range, setRange] = useState<string>('3h'); // Default range is 3 hours
   const [zoom, setZoom] = useState<boolean>(false); // Default to un-checked (no zoom)
+  const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
+  const { data: session } = useSession();
+  const [urlLoaded, setUrlLoaded] = useState(false);
 
+  // Fetch the user's Nightscout URL if logged in
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetch(`/api/user-settings?userId=${session.user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
+          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+          setUrlLoaded(true);
+        })
+        .catch(() => {
+          setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+          setUrlLoaded(true);
+        });
+    } else if (session === null) {
+      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+      setUrlLoaded(true);
+    }
+  }, [session]);
+
+  // Fetch blood sugar data from the correct Nightscout instance
   const fetchBloodSugar = async () => {
     try {
-      const response = await fetch('https://sharpy-cgm.up.railway.app/api/v1/entries.json?count=1');
+      const response = await fetch(`${nightscoutUrl}/api/v1/entries.json?count=1`);
       if (!response.ok) {
         throw new Error('Failed to fetch blood sugar data');
       }
@@ -41,10 +69,11 @@ const BloodSugarWidget: React.FC = () => {
         setBloodSugar(data[0].sgv);
         setTimestamp(data[0].dateString);
         setTrend(data[0].direction);
+        setError(null);
       } else {
         setError('No data available');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     }
   };
@@ -58,18 +87,20 @@ const BloodSugarWidget: React.FC = () => {
       if (range === '1w') count = 2016; // 1 week
 
       const response = await fetch(
-        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?count=${count}`
+        `${nightscoutUrl}/api/v1/entries.json?count=${count}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch graph data');
       }
       const data: BloodSugarData[] = await response.json();
       setGraphData(data.reverse()); // Reverse to show oldest first
-    } catch (err) {
+    } catch (err: any) {
+      setGraphData([]);
       console.error('Error fetching graph data:', err.message);
     }
   };
 
+  // Refetch data when range or nightscoutUrl changes
   useEffect(() => {
     fetchBloodSugar();
     fetchGraphData();
@@ -80,7 +111,7 @@ const BloodSugarWidget: React.FC = () => {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [range]);
+  }, [range, nightscoutUrl]);
 
   const getTrendArrow = (direction: string | null) => {
     switch (direction) {

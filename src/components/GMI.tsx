@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { useSession } from "next-auth/react";
 
 interface BloodSugarData {
   sgv: number; // Sensor Glucose Value
   dateString: string; // Timestamp
 }
 
+const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
+
 const GMI: React.FC = () => {
+  const { data: session } = useSession();
+  const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
+  const [urlLoaded, setUrlLoaded] = useState(false);
+
   const [meanGlucose, setMeanGlucose] = useState<number | null>(null);
   const [gmi, setGmi] = useState<{ mmol: string | null; percentage: string | null }>({
     mmol: null,
@@ -14,7 +21,36 @@ const GMI: React.FC = () => {
   const [range, setRange] = useState<string>('3m'); // Default range is 3 months
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fetchMeanGlucose = async (range: string) => {
+  // Fetch the user's Nightscout URL if logged in
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetch(`/api/user-settings?userId=${session.user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
+          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+          setUrlLoaded(true);
+        })
+        .catch(() => {
+          setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+          setUrlLoaded(true);
+        });
+    } else if (session === null) {
+      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+      setUrlLoaded(true);
+    }
+    // Do not set anything if session is undefined (still loading)
+  }, [session]);
+
+  useEffect(() => {
+    if (urlLoaded) {
+      fetchMeanGlucose(range, nightscoutUrl);
+    }
+  }, [range, nightscoutUrl, urlLoaded]);
+
+  if (!urlLoaded) return <div>Loading...</div>;
+
+  const fetchMeanGlucose = async (range: string, url: string) => {
     try {
       setLoading(true);
 
@@ -28,7 +64,7 @@ const GMI: React.FC = () => {
 
       const query = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
       const response = await fetch(
-        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?${query}&count=100000`
+        `${url}/api/v1/entries.json?${query}&count=100000`
       );
 
       if (!response.ok) {
@@ -56,19 +92,6 @@ const GMI: React.FC = () => {
         return;
       }
 
-      // // Calculate mean glucose in mmol/L
-      // const mean = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
-      // setMeanGlucose(mean);
-
-      // // Calculate GMI
-      // const gmiMmol = 12.71 + 4.70587 * mean;
-      // const gmiPercentage = gmiMmol / 10.929 + 2.15; // Convert mmol/mol to percentage
-      // setGmi({
-      //   mmol: gmiMmol.toFixed(1),
-      //   percentage: gmiPercentage.toFixed(1),
-      // });
-
-      // ...existing code...
       // Calculate mean glucose in mmol/L
       const mean = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
       setMeanGlucose(mean);
@@ -92,9 +115,9 @@ const GMI: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchMeanGlucose(range);
-  }, [range]);
+  // useEffect(() => {
+  //   fetchMeanGlucose(range, nightscoutUrl);
+  // }, [range, nightscoutUrl]);
 
   return (
     <div className="bg-white p-4 rounded-md shadow-md">

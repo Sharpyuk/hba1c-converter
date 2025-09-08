@@ -12,15 +12,16 @@ interface BloodSugarData {
 
 interface PercentileWidgetProps {
   range: string;
+  nightscoutUrl: string; 
 }
 
-const PercentileWidget: React.FC<PercentileWidgetProps> = ({ range }) => {
+const PercentileWidget: React.FC<PercentileWidgetProps> = ({ range, nightscoutUrl }) => {
   const [chartData, setChartData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchPercentileData();
-  }, [range]);
+  }, [range, nightscoutUrl]);
 
   const fetchPercentileData = async () => {
     try {
@@ -47,7 +48,7 @@ const PercentileWidget: React.FC<PercentileWidgetProps> = ({ range }) => {
 
       const query = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
       const response = await fetch(
-        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?${query}&count=10000`
+        `${nightscoutUrl}/api/v1/entries.json?${query}&count=10000`
       );
 
       if (!response.ok) {

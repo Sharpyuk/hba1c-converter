@@ -27,9 +27,12 @@ interface StatisticsWidgetProps {
   setRange: (range: string) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
+  nightscoutUrl: string; 
 }
 
-const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, loading, setLoading }) => {
+const safeNumber = (value: number) => (isNaN(value) || value === undefined ? 0 : value);
+
+const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, loading, setLoading, nightscoutUrl }) => {
   const [timeInRange, setTimeInRange] = useState<number>(0);
   const [timeAboveRange, setTimeAboveRange] = useState<number>(0);
   const [timeBelowRange, setTimeBelowRange] = useState<number>(0);
@@ -48,9 +51,22 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
   const [proteinCarbs, setProteinCarbs] = useState<number>(0);
   const [totalCarbLoad, setTotalCarbLoad] = useState<number>(0);
 
+  // Add these lines right here:
+const hasCarbData =
+  totalCarbs > 0 ||
+  proteinCarbs > 0 ||
+  totalCarbLoad > 0 ||
+  averageCarbsPerDay > 0 ||
+  averageCarbLoadPerDay > 0;
+
+const hasInsulinData =
+  (!isNaN(totalInsulin.basal) && totalInsulin.basal > 0) ||
+  (!isNaN(totalInsulin.bolus) && totalInsulin.bolus > 0) ||
+  (!isNaN(averageDailyInsulin) && averageDailyInsulin > 0);
+  
   useEffect(() => {
     fetchStatistics();
-  }, [range]);
+  }, [range, nightscoutUrl]);
 
   const fetchStatistics = async () => {
     try {
@@ -82,7 +98,7 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       // Fetch blood sugar data for TIR, TAR, and TBR
       const entriesQuery = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
       const entriesResponse = await fetch(
-        `https://sharpy-cgm.up.railway.app/api/v1/entries.json?${entriesQuery}&count=10000`
+        `${nightscoutUrl}/api/v1/entries.json?${entriesQuery}&count=10000`
       );
   
       if (!entriesResponse.ok) {
@@ -112,7 +128,7 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       // Fetch treatment data for insulin and carbs
       const treatmentsQuery = `find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lt]=${now.toISOString()}`;
       const treatmentsResponse = await fetch(
-        `https://sharpy-cgm.up.railway.app/api/v1/treatments.json?count=100000&${treatmentsQuery}`
+        `${nightscoutUrl}/api/v1/treatments.json?count=100000&${treatmentsQuery}`
       );
   
       if (!treatmentsResponse.ok) {
@@ -169,12 +185,19 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
   
       // Fetch basal profile
       const fetchBasalProfile = async (): Promise<{ time: string; rate: number }[]> => {
-        const response = await fetch(`https://sharpy-cgm.up.railway.app/api/v1/profile.json`);
+        const response = await fetch(`${nightscoutUrl}/api/v1/profile.json`);
         if (!response.ok) {
           throw new Error(`Failed to fetch basal profile: ${response.status}`);
         }
         const profileData = await response.json();
-        return profileData[0]?.store?.Default || [];
+        //return profileData[0]?.store?.Default || [];
+        // Nightscout profile.json structure:
+        // [ { store: { ProfileName: { basal: [...] } }, ... } ]
+        const store = profileData[0]?.store;
+        const profileName = store ? Object.keys(store)[0] : null;
+        const basalProfile = profileName ? store[profileName].basal : [];
+
+        return basalProfile; // This is now an array
       };
   
       // Calculate basal insulin
@@ -232,10 +255,18 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
         .reduce((sum, entry) => sum + (entry.insulin || 0), 0);
   
       const roundedBolusInsulin = Math.round(bolusInsulin * 100) / 100;
+
+      const safeBasal = safeNumber(roundedBasalInsulin);
+      const safeBolus = safeNumber(roundedBolusInsulin);
+      const safeTotal = safeBasal + safeBolus;
+      const safeAverage = safeNumber((safeBasal + safeBolus) / daysInRange);
+
+      setTotalInsulin({ basal: safeBasal, bolus: safeBolus });
+      setAverageDailyInsulin(safeAverage);
   
       // Set the total insulin and average daily insulin
-      setTotalInsulin({ basal: roundedBasalInsulin, bolus: roundedBolusInsulin });
-      setAverageDailyInsulin((roundedBasalInsulin + roundedBolusInsulin) / daysInRange);
+      //setTotalInsulin({ basal: roundedBasalInsulin, bolus: roundedBolusInsulin });
+      //setAverageDailyInsulin((roundedBasalInsulin + roundedBolusInsulin) / daysInRange);
     } catch (error) {
       console.error('Error fetching statistics:', error);
     } finally {
@@ -281,7 +312,7 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Statistics</h2>
         <a
-          href="https://sharpy-cgm.up.railway.app/report"
+          href={`${nightscoutUrl.replace(/\/$/, '')}/report`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center space-x-2 hover:underline"
@@ -418,97 +449,109 @@ const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, lo
           </tbody>
         </table>
 
+        {hasCarbData ? (
+          <table className="table-auto w-full text-left border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-4 py-2 border border-gray-300 col-span-3"  colSpan={3}>Carbs</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="px-4 py-2 border border-gray-300">Total Carbs Eaten</td>
+                <td className="px-4 py-2 border border-gray-300">
+                  {loading ? <Skeleton width={100} /> : `${totalCarbs.toFixed(2)} g`}
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2 border border-gray-300">Protein/Fat Converted to Carbs (Gluconeogenesis)</td>
+                <td className="px-4 py-2 border border-gray-300">
+                  {loading ? <Skeleton width={100} /> : `${proteinCarbs.toFixed(2)}g`}
+                </td>
+              </tr>
+              <tr>
+                <td className="px-4 py-2 border border-gray-300">Total Carb Load</td>
+                <td className="px-4 py-2 border border-gray-300">
+                  {loading ? <Skeleton width={100} /> : `${totalCarbLoad.toFixed(2)}g`}
+                </td>
+              </tr>
+              {['1w', '1m', '3m'].includes(range) && (
+                <tr>
+                  <td className="px-4 py-2 border border-gray-300">Average Carbs Eaten Per Day</td>
+                  <td className="px-4 py-2 border border-gray-300">
+                    {loading ? <Skeleton width={100} /> : `${averageCarbsPerDay.toFixed(2)} g/day`}
+                  </td>
+                </tr>
+              )}
+              {['1w', '1m', '3m'].includes(range) && (
+                <tr>
+                  <td className="px-4 py-2 border border-gray-300">Average Carb Load Per Day</td>
+                  <td className="px-4 py-2 border border-gray-300">
+                    {loading ? <Skeleton width={100} /> : `${averageCarbLoadPerDay.toFixed(2)} g/day`}
+                  </td>
+                </tr>
+              )}
+              </tbody>
+          </table>
+        ) : (
+          <div className="my-4 text-center text-gray-500 italic">
+            {loading ? <Skeleton width={200} /> : "No carb data available for this period."}
+          </div>
+        )}
 
-        <table className="table-auto w-full text-left border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="px-4 py-2 border border-gray-300 col-span-3"  colSpan={3}>Carbs</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Total Carbs Eaten</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? <Skeleton width={100} /> : `${totalCarbs.toFixed(2)} g`}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Protein/Fat Converted to Carbs (Gluconeogenesis)</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? <Skeleton width={100} /> : `${proteinCarbs.toFixed(2)}g`}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Total Carb Load</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? <Skeleton width={100} /> : `${totalCarbLoad.toFixed(2)}g`}
-              </td>
-            </tr>
-            {['1w', '1m', '3m'].includes(range) && (
+        {hasInsulinData ? (
+          <table className="table-auto w-full text-left border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-4 py-2 border border-gray-300 col-span-3"  colSpan={3}>Insulin</th>
+              </tr>
+            </thead>
+            <tbody>
               <tr>
-                <td className="px-4 py-2 border border-gray-300">Average Carbs Eaten Per Day</td>
+                <td className="px-4 py-2 border border-gray-300">Total Insulin</td>
                 <td className="px-4 py-2 border border-gray-300">
-                  {loading ? <Skeleton width={100} /> : `${averageCarbsPerDay.toFixed(2)} g/day`}
+                  {loading ? (
+                    <Skeleton width={150} />
+                  ) : (
+                    `${totalInsulin.basal + totalInsulin.bolus} U`
+                  )}
                 </td>
               </tr>
-            )}
-            {['1w', '1m', '3m'].includes(range) && (
               <tr>
-                <td className="px-4 py-2 border border-gray-300">Average Carb Load Per Day</td>
+                <td className="px-4 py-2 border border-gray-300">Total Basal</td>
                 <td className="px-4 py-2 border border-gray-300">
-                  {loading ? <Skeleton width={100} /> : `${averageCarbLoadPerDay.toFixed(2)} g/day`}
+                  {loading ? (
+                    <Skeleton width={150} />
+                  ) : (
+                    `${totalInsulin.basal} U`
+                  )}
                 </td>
               </tr>
-            )}
+              <tr>
+                <td className="px-4 py-2 border border-gray-300">Total Bolus</td>
+                <td className="px-4 py-2 border border-gray-300">
+                  {loading ? (
+                    <Skeleton width={150} />
+                  ) : (
+                    `${totalInsulin.bolus} U`
+                  )}
+                </td>
+              </tr>
+              {['1w', '1m', '3m'].includes(range) && (
+              <tr>
+                <td className="px-4 py-2 border border-gray-300">Average Daily Insulin</td>
+                <td className="px-4 py-2 border border-gray-300">
+                  {loading ? <Skeleton width={100} /> : `${averageDailyInsulin.toFixed(2)} U/day`}
+                </td>
+              </tr>
+              )}
             </tbody>
-        </table>
-        <table className="table-auto w-full text-left border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="px-4 py-2 border border-gray-300 col-span-3"  colSpan={3}>Insulin</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Total Insulin</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? (
-                  <Skeleton width={150} />
-                ) : (
-                  `${totalInsulin.basal + totalInsulin.bolus} U`
-                )}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Total Basal</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? (
-                  <Skeleton width={150} />
-                ) : (
-                  `${totalInsulin.basal} U`
-                )}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Total Bolus</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? (
-                  <Skeleton width={150} />
-                ) : (
-                  `${totalInsulin.bolus} U`
-                )}
-              </td>
-            </tr>
-            {['1w', '1m', '3m'].includes(range) && (
-            <tr>
-              <td className="px-4 py-2 border border-gray-300">Average Daily Insulin</td>
-              <td className="px-4 py-2 border border-gray-300">
-                {loading ? <Skeleton width={100} /> : `${averageDailyInsulin.toFixed(2)} U/day`}
-              </td>
-            </tr>
-            )}
-          </tbody>
-        </table>
+          </table>
+        ) : (
+          <div className="my-4 text-center text-gray-500 italic">
+            {loading ? <Skeleton width={200} /> : "No insulin data available for this period."}
+          </div>
+        )}
       </div>
     </div>
   );
