@@ -4,6 +4,8 @@ import Layout from '../components/Layout';
 import BloodSugarWidget from '../components/BloodSugarWidget';
 import ConverterForm from '../components/ConverterForm';
 import GMI from '../components/GMI';
+import HypoTreatmentsWidget from "../components/HypoWidget";
+import CarbCalculatorWidget from "../components/CarbCalculatorWidget";
 
 const Home = () => {
   return (
@@ -12,6 +14,14 @@ const Home = () => {
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <BloodSugarWidget />
         </div>
+        <div className="mb-6 w-full max-w-screen-sm mx-auto">
+          <HypoTreatmentsWidget />
+        </div>  
+
+        <div className="mb-6 w-full max-w-screen-sm mx-auto">
+          <CarbCalculatorWidget />
+        </div>
+        
 
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <GMI />
