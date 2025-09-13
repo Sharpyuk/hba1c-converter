@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useSession } from "next-auth/react";
 
 interface BloodSugarData {
   sgv: number; // Sensor Glucose Value
@@ -8,11 +7,11 @@ interface BloodSugarData {
 
 const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
 
-const GMI: React.FC = () => {
-  const { data: session } = useSession();
-  const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
-  const [urlLoaded, setUrlLoaded] = useState(false);
+interface GMIProps {
+  nightscoutUrl?: string;
+}
 
+const GMI: React.FC<GMIProps> = ({ nightscoutUrl }) => {
   const [meanGlucose, setMeanGlucose] = useState<number | null>(null);
   const [gmi, setGmi] = useState<{ mmol: string | null; percentage: string | null }>({
     mmol: null,
@@ -21,34 +20,8 @@ const GMI: React.FC = () => {
   const [range, setRange] = useState<string>('3m'); // Default range is 3 months
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Fetch the user's Nightscout URL if logged in
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetch(`/api/user-settings?userId=${session.user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
-          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        })
-        .catch(() => {
-          setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        });
-    } else if (session === null) {
-      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-      setUrlLoaded(true);
-    }
-    // Do not set anything if session is undefined (still loading)
-  }, [session]);
-
-  useEffect(() => {
-    if (urlLoaded) {
-      fetchMeanGlucose(range, nightscoutUrl);
-    }
-  }, [range, nightscoutUrl, urlLoaded]);
-
-  if (!urlLoaded) return <div>Loading...</div>;
+  // Use prop or fallback to default
+  const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
 
   const fetchMeanGlucose = async (range: string, url: string) => {
     try {
@@ -115,9 +88,9 @@ const GMI: React.FC = () => {
     }
   };
 
-  // useEffect(() => {
-  //   fetchMeanGlucose(range, nightscoutUrl);
-  // }, [range, nightscoutUrl]);
+  useEffect(() => {
+    fetchMeanGlucose(range, url);
+  }, [range, url]);
 
   return (
     <div className="bg-white p-4 rounded-md shadow-md">

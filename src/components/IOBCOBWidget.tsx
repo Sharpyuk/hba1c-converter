@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const INSULIN_ACTION_MINUTES = 240;
@@ -85,10 +84,11 @@ function getDayLabel(date: Date) {
   });
 }
 
-const IOBCOBWidget: React.FC = () => {
-  const { data: session } = useSession();
-  const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
-  const [urlLoaded, setUrlLoaded] = useState(false);
+interface IOBCOBWidgetProps {
+  nightscoutUrl?: string;
+}
+
+const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
   const [iob, setIob] = useState<number | null>(null);
   const [cob, setCob] = useState<number | null>(null);
   const [treatments, setTreatments] = useState<any[]>([]);
@@ -97,6 +97,7 @@ const IOBCOBWidget: React.FC = () => {
     d.setHours(0, 0, 0, 0);
     return d;
   });
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
 
   // Calculate TDD and total carbs for the selected day
   const tdd = treatments.reduce(
@@ -108,34 +109,16 @@ const IOBCOBWidget: React.FC = () => {
     0
   );
 
-  // Fetch user's Nightscout URL
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetch(`/api/user-settings?userId=${session.user.email}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
-          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        })
-        .catch(() => {
-          setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        });
-    } else if (session === null) {
-      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-      setUrlLoaded(true);
-    }
-  }, [session]);
+  // Use prop or fallback to default
+  const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
 
   // Fetch treatments for the selected day
   useEffect(() => {
-    if (!urlLoaded) return;
     const start = new Date(selectedDate);
     const end = new Date(selectedDate);
     end.setHours(23, 59, 59, 999);
     fetch(
-      `${nightscoutUrl}/api/v1/treatments.json?find[created_at][$gte]=${start.toISOString()}&find[created_at][$lte]=${end.toISOString()}&count=1000`
+      `${url}/api/v1/treatments.json?find[created_at][$gte]=${start.toISOString()}&find[created_at][$lte]=${end.toISOString()}&count=1000`
     )
       .then(res => res.json())
       .then(data => {
@@ -143,133 +126,226 @@ const IOBCOBWidget: React.FC = () => {
         setIob(calculateIOB(data));
         setCob(calculateCOB(data));
       });
-  }, [nightscoutUrl, urlLoaded, selectedDate]);
+  }, [url, selectedDate]);
 
   const chartData = groupTreatmentsByHour(treatments, selectedDate);
 
-return (
-  <div className="bg-blue-50 p-4 rounded-xl shadow-md mt-6 max-w-screen-sm mx-auto">
-    <h2 className="text-xl font-semibold mb-4">Insulin &amp; Carbs</h2>
-    <div className="flex justify-center gap-4 mb-4">
-      <div className="bg-white shadow rounded-lg px-6 py-3 flex flex-col items-center min-w-[110px]">
-        <span className="text-xs text-gray-500 font-medium mb-1">IOB</span>
-        <span className="text-lg font-bold text-blue-700">
-          {iob !== null ? iob.toFixed(2) : "--"}
-          <span className="text-base font-normal text-gray-500">U</span>
-        </span>
+  // Get treatments for the selected hour
+  const treatmentsForHour = selectedHour !== null
+    ? treatments.filter(t => {
+        const d = new Date(t.created_at);
+        return (
+          d.getFullYear() === selectedDate.getFullYear() &&
+          d.getMonth() === selectedDate.getMonth() &&
+          d.getDate() === selectedDate.getDate() &&
+          d.getHours() === selectedHour
+        );
+      })
+    : [];
+
+  // Helper to parse notes JSON if present
+  function parseNotes(notes: string | undefined) {
+    if (!notes) return null;
+    try {
+      const parsed = JSON.parse(notes);
+      if (typeof parsed === "object" && parsed !== null) {
+        return parsed;
+      }
+    } catch {
+      // Not JSON, just return as string
+    }
+    return null;
+  }
+
+  return (
+    <div className="bg-blue-50 p-4 rounded-xl shadow-md mt-6 max-w-screen-sm mx-auto">
+      <h2 className="text-xl font-semibold mb-4">Insulin &amp; Carbs</h2>
+      {/* IOB and COB summary boxes at the top */}
+      <div className="flex justify-center gap-4 mb-4">
+        <div className="bg-white shadow rounded-lg px-6 py-3 flex flex-col items-center min-w-[110px]">
+          <span className="text-xs text-gray-500 font-medium mb-1">IOB</span>
+          <span className="text-lg font-bold text-blue-700">
+            {iob !== null ? iob.toFixed(2) : "--"}
+            <span className="text-base font-normal text-gray-500">U</span>
+          </span>
+        </div>
+        <div className="bg-white shadow rounded-lg px-6 py-3 flex flex-col items-center min-w-[110px]">
+          <span className="text-xs text-gray-500 font-medium mb-1">COB</span>
+          <span className="text-lg font-bold text-yellow-700">
+            {cob !== null ? cob.toFixed(1) : "--"}
+            <span className="text-base font-normal text-gray-500">g</span>
+          </span>
+        </div>
       </div>
-      <div className="bg-white shadow rounded-lg px-6 py-3 flex flex-col items-center min-w-[110px]">
-        <span className="text-xs text-gray-500 font-medium mb-1">COB</span>
-        <span className="text-lg font-bold text-yellow-700">
-          {cob !== null ? cob.toFixed(1) : "--"}
-          <span className="text-base font-normal text-gray-500">g</span>
-        </span>
+      {/* Graph box with date controls, chart, and TDD/Carbs */}
+      <div
+        className="bg-white rounded-xl shadow py-6 px-2 transition-all duration-300"
+        style={{
+          width: "100%",
+          minHeight: 340,
+        }}
+      >
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <button
+            className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-2xl shadow transition active:bg-gray-300"
+            aria-label="Previous day"
+            onClick={() =>
+              setSelectedDate(prev => {
+                const d = new Date(prev);
+                d.setDate(d.getDate() - 1);
+                setSelectedHour(null);
+                return d;
+              })
+            }
+          >
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+              <path d="M15 19l-7-7 7-7" stroke="#374151" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <span className="font-semibold text-base">
+            {getDayLabel(selectedDate)}
+          </span>
+          <button
+            className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-2xl shadow transition active:bg-gray-300"
+            aria-label="Next day"
+            onClick={() =>
+              setSelectedDate(prev => {
+                const d = new Date(prev);
+                d.setDate(d.getDate() + 1);
+                setSelectedHour(null);
+                return d;
+              })
+            }
+          >
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+              <path d="M9 5l7 7-7 7" stroke="#374151" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div style={{ width: "100%", height: 160 }}>
+          <ResponsiveContainer>
+            <BarChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid stroke="#e5e7eb" strokeWidth={0.5} vertical={false} />
+              <XAxis dataKey="hour" fontSize={10} />
+              <YAxis
+                yAxisId="left"
+                fontSize={10}
+                axisLine={true}
+                tickLine={true}
+                width={25}
+                label={{ value: "Carbs (g)", angle: -90, position: "insideLeft", fontSize: 10 }}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                fontSize={10}
+                axisLine={true}
+                tickLine={true}
+                width={25}
+                domain={[0, 5]}
+                label={{ value: "Insulin (U)", angle: 90, position: "insideRight", fontSize: 10 }}
+              />
+              <Tooltip />
+              <Legend />
+              <Bar
+                yAxisId="left"
+                dataKey="carbs"
+                fill="#fbbf24"
+                name="Carbs (g)"
+                radius={[4, 4, 0, 0]}
+                onClick={(_, index) => setSelectedHour(index)}
+              />
+              <Bar
+                yAxisId="right"
+                dataKey="insulin"
+                fill="#3b82f6"
+                name="Insulin (U)"
+                radius={[4, 4, 0, 0]}
+                onClick={(_, index) => setSelectedHour(index)}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Treatments details shown in a hidden div directly below the chart */}
+        {selectedHour !== null && (
+          <div className="mt-4 bg-gray-50 rounded p-3 border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold">Treatments for {selectedHour}:00</span>
+              <button
+                className="text-xs text-blue-600 underline"
+                onClick={() => setSelectedHour(null)}
+              >
+                Hide
+              </button>
+            </div>
+            {treatmentsForHour.filter(t => (t.carbs || t.insulin)).length === 0 ? (
+              <div className="text-gray-500 italic">No treatments for this hour.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-2 py-1 border">Time</th>
+                    <th className="px-2 py-1 border">Carbs</th>
+                    <th className="px-2 py-1 border">Insulin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...treatmentsForHour]
+                    .reverse()
+                    .filter(t => (t.carbs || t.insulin))
+                    .map((t, idx) => {
+                      const parsedNotes = parseNotes(t.notes);
+                      const hasNotes =
+                        (parsedNotes && Object.keys(parsedNotes).length > 0) ||
+                        (t.notes && t.notes.trim() !== "");
+                      return (
+                        <React.Fragment key={t._id || idx}>
+                          <tr>
+                            <td className="px-2 py-1 border">
+                              {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="px-2 py-1 border">{t.carbs ?? ""}</td>
+                            <td className="px-2 py-1 border">{t.insulin ?? ""}</td>
+                          </tr>
+                          {hasNotes && (
+                            <tr>
+                              <td className="px-2 py-1 border bg-gray-100" colSpan={3}>
+                                {parsedNotes
+                                  ? <pre className="whitespace-pre-wrap text-xs bg-gray-100 p-1 rounded">{JSON.stringify(parsedNotes, null, 2)}</pre>
+                                  : t.notes}
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+        {/* TDD and Total Carbs boxes below the chart, inside the white box */}
+        <div className="flex justify-center gap-8 mt-6">
+          <div className="bg-gray-100 rounded-lg shadow px-4 py-2 flex flex-col items-center min-w-[110px]">
+            <span className="text-xs text-gray-500 font-medium mb-1">TDD</span>
+            <span className="text-lg font-bold text-blue-700">
+              {tdd.toFixed(2)}
+              <span className="text-base font-normal text-gray-500">U</span>
+            </span>
+          </div>
+          <div className="bg-gray-100 rounded-lg shadow px-4 py-2 flex flex-col items-center min-w-[110px]">
+            <span className="text-xs text-gray-500 font-medium mb-1">Total Carbs</span>
+            <span className="text-lg font-bold text-yellow-700">
+              {totalCarbs.toFixed(1)}
+              <span className="text-base font-normal text-gray-500">g</span>
+            </span>
+          </div>
+        </div>
       </div>
     </div>
-    <div className="bg-white rounded-xl shadow p-2" style={{ width: "100%", height: 220 }}>
-      {/* Date controls and label INSIDE the white box */}
-      <div className="flex items-center justify-center gap-4 mb-2 px-2">
-        <button
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-2xl shadow transition active:bg-gray-300"
-          aria-label="Previous day"
-          onClick={() =>
-            setSelectedDate(prev => {
-              const d = new Date(prev);
-              d.setDate(d.getDate() - 1);
-              return d;
-            })
-          }
-        >
-          {/* Larger SVG left chevron */}
-          <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
-            <path d="M15 19l-7-7 7-7" stroke="#374151" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <span className="font-semibold text-base">
-          {getDayLabel(selectedDate)}
-        </span>
-        <button
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-2xl shadow transition active:bg-gray-300"
-          aria-label="Next day"
-          onClick={() =>
-            setSelectedDate(prev => {
-              const d = new Date(prev);
-              d.setDate(d.getDate() + 1);
-              return d;
-            })
-          }
-        >
-          {/* Larger SVG right chevron */}
-          <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
-            <path d="M9 5l7 7-7 7" stroke="#374151" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </div>    
-      <div style={{ width: "100%", height: 160 }}>
-  <ResponsiveContainer>
-    <BarChart
-      data={chartData}
-      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-    >
-      <CartesianGrid stroke="#e5e7eb" strokeWidth={0.5} vertical={false} />
-      <XAxis dataKey="hour" fontSize={10} />
-      {/* Left Y axis for Carbs */}
-      <YAxis
-        yAxisId="left"
-        fontSize={10}
-        axisLine={true}
-        tickLine={true}
-        width={25}
-        label={{ value: "Carbs (g)", angle: -90, position: "insideLeft", fontSize: 10 }}
-      />
-      {/* Right Y axis for Insulin */}
-      <YAxis
-        yAxisId="right"
-        orientation="right"
-        fontSize={10}
-        axisLine={true}
-        tickLine={true}
-        width={25}
-        domain={[0, 10]} // <-- Fixed scale: 0 to 10 units
-        label={{ value: "Insulin (U)", angle: 90, position: "insideRight", fontSize: 10 }}
-      />
-      <Tooltip />
-      <Legend />
-      <Bar
-        yAxisId="left"
-        dataKey="carbs"
-        fill="#fbbf24"
-        name="Carbs (g)"
-        radius={[4, 4, 0, 0]}
-      />
-      <Bar
-        yAxisId="right"
-        dataKey="insulin"
-        fill="#3b82f6"
-        name="Insulin (U)"
-        radius={[4, 4, 0, 0]}
-      />
-    </BarChart>
-  </ResponsiveContainer>
-</div>
-    </div>
-    <div className="flex justify-center gap-8 mt-4">
-      <div className="bg-white rounded-lg shadow px-4 py-2 flex flex-col items-center min-w-[110px]">
-        <span className="text-xs text-gray-500 font-medium mb-1">TDD</span>
-        <span className="text-lg font-bold text-blue-700">
-          {tdd.toFixed(2)}
-          <span className="text-base font-normal text-gray-500">U</span>
-        </span>
-      </div>
-      <div className="bg-white rounded-lg shadow px-4 py-2 flex flex-col items-center min-w-[110px]">
-        <span className="text-xs text-gray-500 font-medium mb-1">Total Carbs</span>
-        <span className="text-lg font-bold text-yellow-700">
-          {totalCarbs.toFixed(1)}
-          <span className="text-base font-normal text-gray-500">g</span>
-        </span>
-      </div>
-    </div>
-  </div>
   );
 };
 

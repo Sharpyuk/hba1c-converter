@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 
 const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
 
@@ -18,35 +17,19 @@ const ranges = [
   { label: "3 Months", value: "3m" },
 ];
 
-const HypoTreatmentsWidget: React.FC = () => {
-  const { data: session } = useSession();
-  const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
-  const [urlLoaded, setUrlLoaded] = useState(false);
+interface HypoTreatmentsWidgetProps {
+  nightscoutUrl?: string;
+}
+
+const HypoTreatmentsWidget: React.FC<HypoTreatmentsWidgetProps> = ({ nightscoutUrl }) => {
   const [treatments, setTreatments] = useState<HypoTreatment[]>([]);
   const [loading, setLoading] = useState(false);
   const [range, setRange] = useState("today");
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetch(`/api/user-settings?userId=${session.user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
-          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        })
-        .catch(() => {
-          setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        });
-    } else if (session === null) {
-      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-      setUrlLoaded(true);
-    }
-  }, [session]);
+  // Use prop or fallback to default
+  const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
 
   useEffect(() => {
-    if (!urlLoaded) return;
     setLoading(true);
 
     // Calculate date range
@@ -62,12 +45,8 @@ const HypoTreatmentsWidget: React.FC = () => {
       startDate.setMonth(now.getMonth() - 3);
     }
 
-    // Fetch hypo treatments (Carb Correction events)
-    // fetch(
-    //   `${nightscoutUrl}/api/v1/treatments.json?find[eventType]=Carb Correction&find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lte]=${now.toISOString()}&count=1000`
-    // )
     fetch(
-       `${nightscoutUrl}/api/v1/treatments.json?find[eventType]=Carb Correction&find[enteredBy]=hba1c-converter&find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lte]=${now.toISOString()}&count=1000`
+      `${url}/api/v1/treatments.json?find[eventType]=Carb Correction&find[enteredBy]=hba1c-converter&find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lte]=${now.toISOString()}&count=1000`
     )
       .then(res => res.json())
       .then(async (data) => {
@@ -77,7 +56,7 @@ const HypoTreatmentsWidget: React.FC = () => {
             let bloodGlucose: number | undefined = undefined;
             try {
               const bgRes = await fetch(
-                `${nightscoutUrl}/api/v1/entries.json?find[dateString][$lte]=${t.created_at}&count=1&sort[$natural]=-1`
+                `${url}/api/v1/entries.json?find[dateString][$lte]=${t.created_at}&count=1&sort[$natural]=-1`
               );
               const bgData = await bgRes.json();
               if (bgData && bgData.length > 0) {
@@ -100,9 +79,7 @@ const HypoTreatmentsWidget: React.FC = () => {
         setTreatments([]);
         setLoading(false);
       });
-  }, [nightscoutUrl, urlLoaded, range]);
-
-  if (!urlLoaded) return <div>Loading...</div>;
+  }, [url, range]);
 
   return (
     <div className="bg-white p-4 rounded-md shadow-md mt-6">

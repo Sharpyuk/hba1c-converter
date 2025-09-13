@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useSession } from "next-auth/react"; 
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,50 +16,32 @@ ChartJS.register(annotationPlugin);
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface BloodSugarData {
-  sgv: number; // Sensor Glucose Value
-  dateString: string; // Timestamp
-  direction: string; // Trend direction
+  sgv: number;
+  dateString: string;
+  direction: string;
 }
 
 const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
 
+interface BloodSugarWidgetProps {
+  nightscoutUrl?: string;
+}
 
-const BloodSugarWidget: React.FC = () => {
+const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) => {
   const [bloodSugar, setBloodSugar] = useState<number | null>(null);
   const [timestamp, setTimestamp] = useState<string | null>(null);
   const [trend, setTrend] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<BloodSugarData[]>([]);
-  const [range, setRange] = useState<string>('3h'); // Default range is 3 hours
-  const [zoom, setZoom] = useState<boolean>(false); // Default to un-checked (no zoom)
-  const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
-  const { data: session } = useSession();
-  const [urlLoaded, setUrlLoaded] = useState(false);
+  const [range, setRange] = useState<string>('3h');
+  const [zoom, setZoom] = useState<boolean>(false);
 
-  // Fetch the user's Nightscout URL if logged in
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetch(`/api/user-settings?userId=${session.user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
-          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        })
-        .catch(() => {
-          setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        });
-    } else if (session === null) {
-      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-      setUrlLoaded(true);
-    }
-  }, [session]);
+  // Use prop or fallback to default
+  const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
 
-  // Fetch blood sugar data from the correct Nightscout instance
   const fetchBloodSugar = async () => {
     try {
-      const response = await fetch(`${nightscoutUrl}/api/v1/entries.json?count=1`);
+      const response = await fetch(`${url}/api/v1/entries.json?count=1`);
       if (!response.ok) {
         throw new Error('Failed to fetch blood sugar data');
       }
@@ -80,27 +61,26 @@ const BloodSugarWidget: React.FC = () => {
 
   const fetchGraphData = async () => {
     try {
-      let count = 36; // Default to 3 hours (assuming 5-minute intervals)
-      if (range === '12h') count = 144; // 12 hours
-      if (range === '1d') count = 288; // 1 day
-      if (range === '3d') count = 864; // 3 days
-      if (range === '1w') count = 2016; // 1 week
+      let count = 36;
+      if (range === '12h') count = 144;
+      if (range === '1d') count = 288;
+      if (range === '3d') count = 864;
+      if (range === '1w') count = 2016;
 
       const response = await fetch(
-        `${nightscoutUrl}/api/v1/entries.json?count=${count}`
+        `${url}/api/v1/entries.json?count=${count}`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch graph data');
       }
       const data: BloodSugarData[] = await response.json();
-      setGraphData(data.reverse()); // Reverse to show oldest first
+      setGraphData(data.reverse());
     } catch (err: any) {
       setGraphData([]);
       console.error('Error fetching graph data:', err.message);
     }
   };
 
-  // Refetch data when range or nightscoutUrl changes
   useEffect(() => {
     fetchBloodSugar();
     fetchGraphData();
@@ -111,7 +91,7 @@ const BloodSugarWidget: React.FC = () => {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [range, nightscoutUrl]);
+  }, [range, url]);
 
   const getTrendArrow = (direction: string | null) => {
     switch (direction) {
@@ -136,7 +116,7 @@ const BloodSugarWidget: React.FC = () => {
 
   const convertToMmolL = (mgDl: number | null): number | null => {
     if (mgDl === null) return null;
-    return parseFloat((mgDl / 18).toFixed(1)); // Convert and round to 1 decimal place
+    return parseFloat((mgDl / 18).toFixed(1));
   };
 
   const getBackgroundColor = (mmolL: number | null): string => {
@@ -169,8 +149,8 @@ const BloodSugarWidget: React.FC = () => {
         borderColor: 'rgba(75, 192, 192, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         tension: 0.4,
-        pointRadius: range === '3h' ? 3 : 0, // Show dots only for 3h
-        pointHoverRadius: range === '3h' ? 6 : 0, // Optional: show hover effect only for 3h
+        pointRadius: range === '3h' ? 3 : 0,
+        pointHoverRadius: range === '3h' ? 6 : 0,
       },
     ],
   };
@@ -192,7 +172,7 @@ const BloodSugarWidget: React.FC = () => {
                   yMax: 3.8,
                   borderColor: 'red',
                   borderWidth: 2,
-                  borderDash: [6, 6], // Dotted line
+                  borderDash: [6, 6],
                   label: {
                     content: '3.8 mmol (Low)',
                     enabled: true,
@@ -211,7 +191,7 @@ const BloodSugarWidget: React.FC = () => {
                   yMax: 5.5,
                   borderColor: 'orange',
                   borderWidth: 2,
-                  borderDash: [6, 6], // Dotted line
+                  borderDash: [6, 6],
                   label: {
                     content: '5.5 mmol (Target)',
                     enabled: true,
@@ -238,8 +218,8 @@ const BloodSugarWidget: React.FC = () => {
           text: 'Blood Sugar (mmol/L)',
         },
         beginAtZero: false,
-        min: zoom ? undefined : 3, // Fixed minimum when zoom is off
-        max: zoom ? undefined : 15, // Fixed maximum when zoom is off
+        min: zoom ? undefined : 3,
+        max: zoom ? undefined : 15,
       },
     },
   };
