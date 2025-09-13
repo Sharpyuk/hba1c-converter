@@ -168,9 +168,10 @@ return (
     </div>
     <div className="bg-white rounded-xl shadow p-2" style={{ width: "100%", height: 220 }}>
       {/* Date controls and label INSIDE the white box */}
-      <div className="flex justify-between items-center mb-2 px-2">
+      <div className="flex items-center justify-center gap-4 mb-2 px-2">
         <button
-          className="px-2 py-1 bg-gray-200 rounded"
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-2xl shadow transition active:bg-gray-300"
+          aria-label="Previous day"
           onClick={() =>
             setSelectedDate(prev => {
               const d = new Date(prev);
@@ -179,13 +180,17 @@ return (
             })
           }
         >
-          ◀
+          {/* Larger SVG left chevron */}
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+            <path d="M15 19l-7-7 7-7" stroke="#374151" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
-        <span className="font-semibold">
+        <span className="font-semibold text-base">
           {getDayLabel(selectedDate)}
         </span>
         <button
-          className="px-2 py-1 bg-gray-200 rounded"
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 text-2xl shadow transition active:bg-gray-300"
+          aria-label="Next day"
           onClick={() =>
             setSelectedDate(prev => {
               const d = new Date(prev);
@@ -194,30 +199,59 @@ return (
             })
           }
         >
-          ▶
+          {/* Larger SVG right chevron */}
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+            <path d="M9 5l7 7-7 7" stroke="#374151" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
-      </div>
+      </div>    
       <div style={{ width: "100%", height: 160 }}>
-        <ResponsiveContainer>
-          <BarChart
-            data={chartData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid stroke="#e5e7eb" strokeWidth={0.5} vertical={false} />
-            <XAxis dataKey="hour" fontSize={10} />
-            <YAxis
-              fontSize={10}
-              axisLine={true}
-              tickLine={true}
-              width={25}
-            />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="carbs" fill="#fbbf24" name="Carbs (g)" />
-            <Bar dataKey="insulin" fill="#3b82f6" name="Insulin (U)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+  <ResponsiveContainer>
+    <BarChart
+      data={chartData}
+      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+    >
+      <CartesianGrid stroke="#e5e7eb" strokeWidth={0.5} vertical={false} />
+      <XAxis dataKey="hour" fontSize={10} />
+      {/* Left Y axis for Carbs */}
+      <YAxis
+        yAxisId="left"
+        fontSize={10}
+        axisLine={true}
+        tickLine={true}
+        width={25}
+        label={{ value: "Carbs (g)", angle: -90, position: "insideLeft", fontSize: 10 }}
+      />
+      {/* Right Y axis for Insulin */}
+      <YAxis
+        yAxisId="right"
+        orientation="right"
+        fontSize={10}
+        axisLine={true}
+        tickLine={true}
+        width={25}
+        domain={[0, 10]} // <-- Fixed scale: 0 to 10 units
+        label={{ value: "Insulin (U)", angle: 90, position: "insideRight", fontSize: 10 }}
+      />
+      <Tooltip />
+      <Legend />
+      <Bar
+        yAxisId="left"
+        dataKey="carbs"
+        fill="#fbbf24"
+        name="Carbs (g)"
+        radius={[4, 4, 0, 0]}
+      />
+      <Bar
+        yAxisId="right"
+        dataKey="insulin"
+        fill="#3b82f6"
+        name="Insulin (U)"
+        radius={[4, 4, 0, 0]}
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
     </div>
     <div className="flex justify-center gap-8 mt-4">
       <div className="bg-white rounded-lg shadow px-4 py-2 flex flex-col items-center min-w-[110px]">
