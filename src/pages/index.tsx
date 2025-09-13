@@ -6,6 +6,7 @@ import ConverterForm from '../components/ConverterForm';
 import GMI from '../components/GMI';
 import HypoTreatmentsWidget from "../components/HypoWidget";
 import CarbCalculatorWidget from "../components/CarbCalculatorWidget";
+import IOBCOBWidget from "../components/IOBCOBWidget";
 
 const Home = () => {
   return (
@@ -13,6 +14,7 @@ const Home = () => {
       <div className="min-h-screen bg-gray-50 pt-16 sm:px-6 lg:px-8 w-full">
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <BloodSugarWidget />
+          <IOBCOBWidget />
         </div>
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <HypoTreatmentsWidget />
