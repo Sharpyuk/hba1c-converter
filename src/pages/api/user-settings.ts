@@ -54,43 +54,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     case "POST": {
-      const { userId, people, nightscoutAddress, nightscoutApiSecret } = req.body;
+  const { userId, people, nightscoutAddress, nightscoutApiSecret, defaultName } = req.body;
 
-      // Save managed people
-      if (userId && nightscoutAddress !== undefined && nightscoutApiSecret !== undefined) {
-        const { defaultName } = req.body;
-        try {
-          const encryptedSecret = encrypt(nightscoutApiSecret);
-          await query(
-            `INSERT INTO user_settings (user_id, name, nightscout_address, nightscout_api_secret)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (user_id) DO UPDATE SET name = $2, nightscout_address = $3, nightscout_api_secret = $4`,
-            [userId, defaultName || "Me", nightscoutAddress, encryptedSecret]
-          );
-          return res.status(200).json({ message: "Settings saved successfully" });
-        } catch (error: any) {
-          return res.status(500).json({ error: error.message || "Database error" });
-        }
+  // Save managed people
+  if (userId && Array.isArray(people)) {
+    try {
+      await query("DELETE FROM people WHERE user_id = $1", [userId]);
+      for (const person of people) {
+        await query(
+          "INSERT INTO people (user_id, name, nightscout_address, nightscout_api_secret) VALUES ($1, $2, $3, $4)",
+          [
+            userId,
+            person.name,
+            person.nightscout_address,
+            person.nightscout_api_secret ? encrypt(person.nightscout_api_secret) : "",
+          ]
+        );
       }
-
-      // Save default user
-      if (userId && nightscoutAddress !== undefined && nightscoutApiSecret !== undefined) {
-        try {
-          const encryptedSecret = encrypt(nightscoutApiSecret);
-          await query(
-            `INSERT INTO user_settings (user_id, nightscout_address, nightscout_api_secret)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (user_id) DO UPDATE SET nightscout_address = $2, nightscout_api_secret = $3`,
-            [userId, nightscoutAddress, encryptedSecret]
-          );
-          return res.status(200).json({ message: "Settings saved successfully" });
-        } catch (error: any) {
-          return res.status(500).json({ error: error.message || "Database error" });
-        }
-      }
-
-      return res.status(400).json({ error: "Invalid POST body" });
+      return res.status(200).json({ message: "People updated" });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message || "Database error" });
     }
+  }
+
+  // Save default user
+  if (userId && nightscoutAddress !== undefined && nightscoutApiSecret !== undefined) {
+    try {
+      const encryptedSecret = encrypt(nightscoutApiSecret);
+      await query(
+        `INSERT INTO user_settings (user_id, name, nightscout_address, nightscout_api_secret)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) DO UPDATE SET name = $2, nightscout_address = $3, nightscout_api_secret = $4`,
+        [userId, defaultName || "Me", nightscoutAddress, encryptedSecret]
+      );
+      return res.status(200).json({ message: "Settings saved successfully" });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message || "Database error" });
+    }
+  }
+
+  return res.status(400).json({ error: "Invalid POST body" });
+}
 
     default:
       res.setHeader("Allow", ["GET", "POST"]);
