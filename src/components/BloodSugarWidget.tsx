@@ -36,6 +36,12 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
   const [range, setRange] = useState<string>('3h');
   const [zoom, setZoom] = useState<boolean>(false);
 
+  // Hypo button state
+  const [showHypoBox, setShowHypoBox] = useState(false);
+  const [hypoMessage, setHypoMessage] = useState<string | null>(null);
+  const [showHypoConfirm, setShowHypoConfirm] = useState(false);
+  const [registeringHypo, setRegisteringHypo] = useState(false);
+
   // Use prop or fallback to default
   const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
 
@@ -128,6 +134,52 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
   };
 
   const mmolL = convertToMmolL(bloodSugar);
+
+  // --- Hypo Button Logic ---
+  const handleHypoClick = () => {
+    setShowHypoBox(true);
+    setHypoMessage(null);
+    if (mmolL !== null && mmolL < 4.3) {
+      // Auto-register hypo
+      registerHypo();
+    } else {
+      setShowHypoConfirm(true);
+      // Hide box after 10s if no action
+      setTimeout(() => {
+        setShowHypoBox(false);
+        setShowHypoConfirm(false);
+        setHypoMessage(null);
+      }, 10000);
+    }
+  };
+
+  const registerHypo = async () => {
+    setRegisteringHypo(true);
+    setHypoMessage("Registering hypo...");
+    try {
+      const res = await fetch("/api/nightscout-hypo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          glucose: mmolL,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setHypoMessage("Hypo registered successfully!");
+      } else {
+        setHypoMessage(data.error || "Failed to register hypo.");
+      }
+    } catch {
+      setHypoMessage("Failed to register hypo.");
+    } finally {
+      setRegisteringHypo(false);
+      setShowHypoConfirm(false);
+      setTimeout(() => setShowHypoBox(false), 3000);
+    }
+  };
+
+  // --- End Hypo Button Logic ---
 
   const chartData = {
     labels: graphData.map((entry) => {
@@ -225,7 +277,52 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
   };
 
   return (
-    <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center w-full`}>
+    <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center w-full relative`}>
+      {/* Hypo Button */}
+      <button
+        className="absolute top-10 left-10 z-20 bg-yellow-400 hover:bg-yellow-300 rounded-full shadow-2xl shadow-black p-2"
+        style={{ width: 48, height: 48, fontSize: 32, lineHeight: "32px"}}
+        title="Register Hypo"
+        onClick={handleHypoClick}
+      >
+        ⭐
+      </button>
+      {/* Hypo Output Box */}
+      {showHypoBox && (
+        <div className="absolute left-0 right-0 top-0 mx-auto mt-2 bg-yellow-100 text-yellow-900 rounded shadow-lg px-6 py-4 z-30 max-w-md w-full flex flex-col items-center">
+          {hypoMessage && <div className="font-semibold mb-2">{hypoMessage}</div>}
+          {showHypoConfirm && (
+            <div className="flex flex-col items-center">
+              <div className="mb-2 font-semibold">
+                Current BG is not low. Are you sure you want to register a hypo?
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded"
+                  onClick={() => {
+                    setShowHypoConfirm(false);
+                    registerHypo();
+                  }}
+                  disabled={registeringHypo}
+                >
+                  Yes
+                </button>
+                <button
+                  className="bg-gray-400 text-white px-4 py-2 rounded"
+                  onClick={() => {
+                    setShowHypoBox(false);
+                    setShowHypoConfirm(false);
+                    setHypoMessage(null);
+                  }}
+                  disabled={registeringHypo}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {error ? (
         <p>Error: {error}</p>
       ) : bloodSugar !== null ? (
