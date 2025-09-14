@@ -19,8 +19,11 @@ const HypoPage: React.FC = () => {
       fetch(`/api/user-settings?userId=${session.user.email}`)
         .then(res => res.json())
         .then(data => {
-          if (data.nightscout_address) setNightscoutUrl(data.nightscout_address);
-          else setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+          if (data.defaultUser && data.defaultUser.nightscout_address) {
+            setNightscoutUrl(data.defaultUser.nightscout_address);
+          } else {
+            setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+          }
           setUrlLoaded(true);
         })
         .catch(() => {

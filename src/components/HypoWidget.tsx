@@ -89,16 +89,6 @@ const HypoTreatmentsWidget: React.FC<HypoTreatmentsWidgetProps> = ({ nightscoutU
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing) return;
-    // await fetch(`/api/nightscout-hypo`, {
-    //   method: "PUT",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     id: editing._id,
-    //     carbs: parseFloat(editCarbs),
-    //     notes: editNotes,
-    //   }),
-    // });
-    // Add personId to PUT
     await fetch(`/api/nightscout-hypo`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

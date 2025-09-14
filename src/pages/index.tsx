@@ -65,8 +65,9 @@ const Home = () => {
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           {selectedPerson && (
             <HypoTreatmentsWidget 
-              personId={selectedPerson.name} 
-              nightscoutUrl={selectedPerson.nightscout_address} />
+              personId={selectedIdx === 0 ? session?.user?.email : selectedPerson.name}
+              nightscoutUrl={selectedPerson.nightscout_address} 
+            />
           )}
         </div>
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
