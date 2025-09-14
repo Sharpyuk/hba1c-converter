@@ -161,13 +161,13 @@ const HypoTreatmentsWidget: React.FC<HypoTreatmentsWidgetProps> = ({ nightscoutU
                 </td>
                 <td className="px-2 py-1 border text-center">
                   <button
-                    className="text-xs text-white text-blue-600 mr-2"
+                    className="text-xs text-white mr-2"
                     onClick={() => handleEdit(t)}
                   >
                     Edit
                   </button>
                   <button
-                    className="text-xs text-red-600 text-white"
+                    className="text-xs text-white"
                     onClick={() => handleDelete(t._id)}
                     disabled={deletingId === t._id}
                   >
