@@ -15,7 +15,7 @@ const HypoPage: React.FC = () => {
 
   // Fetch user's Nightscout URL
   useEffect(() => {
-    if (session?.user?.id) {
+    if (session?.user?.email) {
       fetch(`/api/user-settings?userId=${session.user.email}`)
         .then(res => res.json())
         .then(data => {
