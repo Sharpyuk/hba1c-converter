@@ -84,6 +84,83 @@ function getDayLabel(date: Date) {
   });
 }
 
+// Helper to parse notes JSON if present
+function parseNotes(notes: string | undefined) {
+  if (!notes) return null;
+  try {
+    const parsed = JSON.parse(notes);
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed;
+    }
+  } catch {
+    // Not JSON, just return as string
+  }
+  return null;
+}
+
+// Helper to render Omnipod 5 JSON as a table
+function renderOmnipod5Table(parsed: any) {
+  if (!parsed) return null;
+  const fields = [
+    { label: "Insulin Delivered", key: "insulinDelivered", unit: "U" },
+    { label: "Carbs Input", key: "carbsInput", unit: "g" },
+    { label: "Insulin On Board", key: "insulinOnBoard", unit: "U" },
+    { label: "Total Insulin Recommendation", key: "totalInsulinRecommendation", unit: "U" },
+    { label: "Blood Glucose Input", key: "bloodGlucoseInput", unit: "mg/dL" },
+    { label: "Insulin Programmed", key: "insulinProgrammed", unit: "U" },
+    { label: "Insulin Recommendation For Carbs", key: "insulinRecommendationForCarbs", unit: "U" },
+    { label: "Insulin Recommendation For Correction", key: "insulinRecommendationForCorrection", unit: "U" },
+    { label: "Insulin Reduction", key: "insulinReduction", unit: "U" },
+    { label: "Override", key: "override", unit: "" },
+  ];
+
+  return (
+    <div className="flex justify-center my-2">
+      <table className="bg-white border border-blue-200 rounded shadow text-xs min-w-[320px]">
+        <tbody>
+          {fields.map(({ label, key, unit }) => {
+            const value = parsed[key];
+            if (
+              (key === "bloodGlucoseInput" && (value === null || value === undefined)) ||
+              (key === "override" && (value === null || value === undefined))
+            ) {
+              return null;
+            }
+            return (
+              <tr key={key} className="even:bg-blue-50">
+                <td className="px-3 py-1 border-b border-blue-100 font-medium text-right whitespace-nowrap text-blue-900">
+                  {label}
+                </td>
+                <td className="px-3 py-1 border-b border-blue-100 text-blue-800 text-right">
+                  {value !== null && value !== undefined && value !== ""
+                    ? (
+                        <>
+                          <span className="font-mono">{value}</span>
+                          {unit && <span className="ml-1 text-xs text-blue-500">{unit}</span>}
+                        </>
+                      )
+                    : <span className="text-gray-400">—</span>
+                  }
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Helper to detect if a treatment is a hypo treatment (copied from HypoWidget logic)
+function isHypoTreatment(t: any) {
+  // You can adjust this logic as needed to match your HypoWidget
+  // For example, eventType === "Carb Correction" and enteredBy === "hba1c-converter"
+  return (
+    (t.eventType === "Carb Correction" && t.enteredBy === "hba1c-converter") ||
+    (t.notes && typeof t.notes === "string" && t.notes.toLowerCase().includes("hypo"))
+  );
+}
+
 interface IOBCOBWidgetProps {
   nightscoutUrl?: string;
 }
@@ -99,6 +176,13 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
   });
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
 
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editCarbs, setEditCarbs] = useState("");
+  const [editInsulin, setEditInsulin] = useState("");
+  const [editGlucose, setEditGlucose] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   // Calculate TDD and total carbs for the selected day
   const tdd = treatments.reduce(
     (sum, t) => sum + (typeof t.insulin === "number" ? t.insulin : 0),
@@ -111,6 +195,66 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
 
   // Use prop or fallback to default
   const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
+
+const handleEdit = (t: any) => {
+  setEditing(t);
+  setEditCarbs(t.carbs?.toString() || "");
+  setEditInsulin(t.insulin?.toString() || "");
+  setEditGlucose(t.glucose?.toString() || "");
+  setEditNotes(t.notes || "");
+};
+
+const handleEditSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!editing) return;
+  await fetch(`/api/nightscout-hypo`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: editing._id,
+      carbs: parseFloat(editCarbs),
+      insulin: parseFloat(editInsulin),
+      glucose: parseFloat(editGlucose),
+      notes: editNotes,
+      // Optionally add personId if needed
+    }),
+  });
+  setEditing(null);
+  setSelectedHour(null); // close modal and table
+  // refetch treatments
+  const start = new Date(selectedDate);
+  const end = new Date(selectedDate);
+  end.setHours(23, 59, 59, 999);
+  fetch(
+    `${url}/api/v1/treatments.json?find[created_at][$gte]=${start.toISOString()}&find[created_at][$lte]=${end.toISOString()}&count=1000`
+  )
+    .then(res => res.json())
+    .then(data => {
+      setTreatments(data);
+      setIob(calculateIOB(data));
+      setCob(calculateCOB(data));
+    });
+};
+
+const handleDelete = async (id: string) => {
+  setDeletingId(id);
+  await fetch(`/api/nightscout-hypo?id=${id}`, { method: "DELETE" });
+  setDeletingId(null);
+  setSelectedHour(null);
+  // refetch treatments
+  const start = new Date(selectedDate);
+  const end = new Date(selectedDate);
+  end.setHours(23, 59, 59, 999);
+  fetch(
+    `${url}/api/v1/treatments.json?find[created_at][$gte]=${start.toISOString()}&find[created_at][$lte]=${end.toISOString()}&count=1000`
+  )
+    .then(res => res.json())
+    .then(data => {
+      setTreatments(data);
+      setIob(calculateIOB(data));
+      setCob(calculateCOB(data));
+    });
+};
 
   // Fetch treatments for the selected day
   useEffect(() => {
@@ -156,6 +300,22 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
     }
     return null;
   }
+
+  // Custom tooltip for formatting insulin to 2 decimal places
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+    if (active && payload && payload.length) {
+      const carbs = payload.find(p => p.dataKey === "carbs")?.value;
+      const insulin = payload.find(p => p.dataKey === "insulin")?.value;
+      return (
+        <div className="bg-white border rounded shadow p-2 text-xs">
+          <div><strong>{label}</strong></div>
+          <div>Carbs: {carbs ?? 0} g</div>
+          <div>Insulin: {insulin !== undefined ? Number(insulin).toFixed(2) : "0.00"} U</div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="bg-blue-50 p-4 rounded-xl shadow-md mt-6 max-w-screen-sm mx-auto">
@@ -227,6 +387,13 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
             <BarChart
               data={chartData}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              onClick={state => {
+                // state.activeLabel is the hour string (e.g., "14:00")
+                if (state && state.activeLabel) {
+                  const hour = parseInt(state.activeLabel.split(":")[0], 10);
+                  setSelectedHour(hour);
+                }
+              }}
             >
               <CartesianGrid stroke="#e5e7eb" strokeWidth={0.5} vertical={false} />
               <XAxis dataKey="hour" fontSize={10} />
@@ -248,7 +415,7 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
                 domain={[0, 5]}
                 label={{ value: "Insulin (U)", angle: 90, position: "insideRight", fontSize: 10 }}
               />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip />} />
               <Legend />
               <Bar
                 yAxisId="left"
@@ -256,7 +423,12 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
                 fill="#fbbf24"
                 name="Carbs (g)"
                 radius={[4, 4, 0, 0]}
-                onClick={(_, index) => setSelectedHour(index)}
+                onClick={data => {
+    if (data && typeof data.hour === "string") {
+      const hour = parseInt(data.hour.split(":")[0], 10);
+      setSelectedHour(hour);
+    }
+  }}
               />
               <Bar
                 yAxisId="right"
@@ -264,18 +436,81 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
                 fill="#3b82f6"
                 name="Insulin (U)"
                 radius={[4, 4, 0, 0]}
-                onClick={(_, index) => setSelectedHour(index)}
+                onClick={data => {
+    if (data && typeof data.hour === "string") {
+      const hour = parseInt(data.hour.split(":")[0], 10);
+      setSelectedHour(hour);
+    }
+  }}
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
+        {/* Edit Treatments */}
+        {editing && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <form
+              onSubmit={handleEditSubmit}
+              className="bg-white p-6 rounded shadow-md w-full max-w-xs"
+            >
+              <h3 className="text-lg font-semibold mb-4">Edit Treatment</h3>
+              <label className="block mb-2 text-sm font-medium">Carbs (g)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={editCarbs}
+                onChange={e => setEditCarbs(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-4"
+              />
+              <label className="block mb-2 text-sm font-medium">Insulin (U)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={editInsulin}
+                onChange={e => setEditInsulin(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-4"
+              />
+              <label className="block mb-2 text-sm font-medium">Blood Glucose (mmol/L)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={editGlucose}
+                onChange={e => setEditGlucose(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-4"
+              />
+              <label className="block mb-2 text-sm font-medium">Notes</label>
+              <input
+                type="text"
+                value={editNotes}
+                onChange={e => setEditNotes(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-4"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-4 py-2 rounded flex-1"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded flex-1"
+                  onClick={() => setEditing(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Treatments details shown in a hidden div directly below the chart */}
         {selectedHour !== null && (
           <div className="mt-4 bg-gray-50 rounded p-3 border border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold">Treatments for {selectedHour}:00</span>
               <button
-                className="text-xs text-blue-600 underline"
+                className="text-xs text-white bg-blue-600 px-2 py-1 rounded transition hover:bg-blue-700"
                 onClick={() => setSelectedHour(null)}
               >
                 Hide
@@ -284,12 +519,14 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
             {treatmentsForHour.filter(t => (t.carbs || t.insulin)).length === 0 ? (
               <div className="text-gray-500 italic">No treatments for this hour.</div>
             ) : (
-              <table className="w-full text-sm">
+              <table className="w-full text-sm border border-blue-200 rounded overflow-hidden">
                 <thead>
-                  <tr>
-                    <th className="px-2 py-1 border">Time</th>
-                    <th className="px-2 py-1 border">Carbs</th>
-                    <th className="px-2 py-1 border">Insulin</th>
+                  <tr className="bg-blue-600 text-white">
+                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Time</th>
+                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Carbs (g)</th>
+                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Insulin (U)</th>
+                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Blood Glucose (mmol/L)</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -301,21 +538,58 @@ const IOBCOBWidget: React.FC<IOBCOBWidgetProps> = ({ nightscoutUrl }) => {
                       const hasNotes =
                         (parsedNotes && Object.keys(parsedNotes).length > 0) ||
                         (t.notes && t.notes.trim() !== "");
+                      // Try to get blood glucose from t.glucose, or from parsedNotes.bloodGlucoseInput (Omnipod 5), or undefined
+                      let bloodGlucose: number | undefined = undefined;
+                      if (typeof t.glucose === "number") {
+                        bloodGlucose = t.glucose;
+                      } else if (parsedNotes && typeof parsedNotes.bloodGlucoseInput === "number") {
+                        bloodGlucose = parsedNotes.bloodGlucoseInput;
+                      }
+                      // Detect hypo treatment
+                      const hypo = isHypoTreatment(t);
                       return (
                         <React.Fragment key={t._id || idx}>
-                          <tr>
-                            <td className="px-2 py-1 border">
+                          <tr className={`even:bg-blue-50${hypo ? " bg-yellow-100" : ""}`}>
+                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
                               {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </td>
-                            <td className="px-2 py-1 border">{t.carbs ?? ""}</td>
-                            <td className="px-2 py-1 border">{t.insulin ?? ""}</td>
+                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                              {t.carbs ?? ""}
+                            </td>
+                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                              {t.insulin ?? ""}
+                            </td>
+                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                              {typeof bloodGlucose === "number" ? bloodGlucose.toFixed(1) : ""}
+                            </td>
+                            <td className="px-2 py-1 border-blue-100 text-center">
+                              <button
+                                className="text-xs text-white mr-2"
+                                onClick={() => handleEdit(t)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="text-xs text-white"
+                                onClick={() => handleDelete(t._id)}
+                              >
+                                X
+                              </button>
+                            </td>
                           </tr>
                           {hasNotes && (
                             <tr>
-                              <td className="px-2 py-1 border bg-gray-100" colSpan={3}>
-                                {parsedNotes
-                                  ? <pre className="whitespace-pre-wrap text-xs bg-gray-100 p-1 rounded">{JSON.stringify(parsedNotes, null, 2)}</pre>
-                                  : t.notes}
+                              <td className="px-2 py-1 border-blue-100 bg-blue-50" colSpan={4}>
+                                {hypo && (
+                                  <span className="inline-block bg-yellow-200 text-yellow-900 px-2 py-1 rounded mr-2 font-semibold text-xs">
+                                    Hypo Treatment
+                                  </span>
+                                )}
+                                {parsedNotes && parsedNotes.pumpName === "Insulet Omnipod® 5 System" ? (
+                                  renderOmnipod5Table(parsedNotes)
+                                ) : parsedNotes ? (
+                                  <pre className="whitespace-pre-wrap text-xs bg-gray-100 p-1 rounded">{JSON.stringify(parsedNotes, null, 2)}</pre>
+                                ) : t.notes}
                               </td>
                             </tr>
                           )}
