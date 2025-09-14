@@ -46,6 +46,12 @@ export default function Layout({ children }) {
             >
               Reports
             </Link>
+            <Link
+              href="/tools"
+              className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+            >
+              Tools
+            </Link>
           </div>
 
           {/* Right Side: Login or Dropdown Menu */}

@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Layout from '../components/Layout';
 import BloodSugarWidget from '../components/BloodSugarWidget';
-import ConverterForm from '../components/ConverterForm';
-import GMI from '../components/GMI';
+//import ConverterForm from '../components/ConverterForm';
 import HypoTreatmentsWidget from "../components/HypoWidget";
-import CarbCalculatorWidget from "../components/CarbCalculatorWidget";
+//import CarbCalculatorWidget from "../components/CarbCalculatorWidget";
 import IOBCOBWidget from "../components/IOBCOBWidget";
 import { useSession } from "next-auth/react";
 
@@ -70,17 +69,17 @@ const Home = () => {
             />
           )}
         </div>
+        {/* 
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <CarbCalculatorWidget />
         </div>
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          {selectedPerson && (
-            <GMI nightscoutUrl={selectedPerson.nightscout_address} />
-          )}
-        </div>
+        */}
+
+        {/* 
         <div className="flex items-center justify-center mt-10 w-full max-w-screen-sm mx-auto">
           <ConverterForm />
         </div>
+        */}
         <div className="text-center mt-6">
           <Link href="/reports" className="text-blue-500 underline">
             View Reports

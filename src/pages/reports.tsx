@@ -5,6 +5,7 @@ import AGPGraph from '../components/AGPGraph';
 import PercentileWidget from '../components/PercentileWidget';
 import CarbsChart from '../components/CarbsChart';
 import Layout from '../components/Layout';
+import GMI from '../components/GMI';
 
 interface Person {
   name: string;
@@ -127,7 +128,11 @@ const Reports: React.FC = () => {
             nightscoutUrl={selectedPerson.nightscout_address}
           />
         </div>
-
+        <div className="mb-6 w-full max-w-screen-sm mx-auto">
+          {selectedPerson && (
+            <GMI nightscoutUrl={selectedPerson.nightscout_address} />
+          )}
+        </div>
         {/* AGPGraph */}
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           <AGPGraph range={range} graphData={graphData} />
