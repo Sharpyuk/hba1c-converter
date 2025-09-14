@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
+import type { TooltipProps } from "recharts";
 
 const INSULIN_ACTION_MINUTES = 240;
 const CARB_ABSORPTION_MINUTES = 120;
@@ -302,10 +303,25 @@ const handleDelete = async (id: string) => {
   }
 
   // Custom tooltip for formatting insulin to 2 decimal places
-  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+  // const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+  //   if (active && payload && payload.length) {
+  //     const carbs = payload.find(p => p.dataKey === "carbs")?.value;
+  //     const insulin = payload.find(p => p.dataKey === "insulin")?.value;
+  //     return (
+  //       <div className="bg-white border rounded shadow p-2 text-xs">
+  //         <div><strong>{label}</strong></div>
+  //         <div>Carbs: {carbs ?? 0} g</div>
+  //         <div>Insulin: {insulin !== undefined ? Number(insulin).toFixed(2) : "0.00"} U</div>
+  //       </div>
+  //     );
+  //   }
+  //   return null;
+  // };
+  const CustomTooltip = (props: any) => {
+    const { active, payload, label } = props;
     if (active && payload && payload.length) {
-      const carbs = payload.find(p => p.dataKey === "carbs")?.value;
-      const insulin = payload.find(p => p.dataKey === "insulin")?.value;
+      const carbs = payload.find((p: any) => p.dataKey === "carbs")?.value;
+      const insulin = payload.find((p: any) => p.dataKey === "insulin")?.value;
       return (
         <div className="bg-white border rounded shadow p-2 text-xs">
           <div><strong>{label}</strong></div>
@@ -423,12 +439,6 @@ const handleDelete = async (id: string) => {
                 fill="#fbbf24"
                 name="Carbs (g)"
                 radius={[4, 4, 0, 0]}
-                onClick={data => {
-    if (data && typeof data.hour === "string") {
-      const hour = parseInt(data.hour.split(":")[0], 10);
-      setSelectedHour(hour);
-    }
-  }}
               />
               <Bar
                 yAxisId="right"
@@ -436,12 +446,6 @@ const handleDelete = async (id: string) => {
                 fill="#3b82f6"
                 name="Insulin (U)"
                 radius={[4, 4, 0, 0]}
-                onClick={data => {
-    if (data && typeof data.hour === "string") {
-      const hour = parseInt(data.hour.split(":")[0], 10);
-      setSelectedHour(hour);
-    }
-  }}
               />
             </BarChart>
           </ResponsiveContainer>
