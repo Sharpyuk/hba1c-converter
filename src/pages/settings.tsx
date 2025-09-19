@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useContext } from "react";
 import Layout from "../components/Layout";
+import { AuthContext } from "./_app";
 
 interface Person {
   name: string;
@@ -9,7 +9,7 @@ interface Person {
 }
 
 const Settings = () => {
-  const { data: session } = useSession();
+  const { token } = useContext(AuthContext);
   const [defaultName, setDefaultName] = useState("Me");
   const [defaultUrl, setDefaultUrl] = useState("");
   const [defaultSecret, setDefaultSecret] = useState("");
@@ -23,8 +23,8 @@ const Settings = () => {
 
   // Load settings from backend
   useEffect(() => {
-    if (!session?.user?.email) return;
-    fetch(`/api/user-settings?userId=${encodeURIComponent(session.user.email)}`)
+    if (!token) return;
+    fetch(`/api/user-settings?token=${encodeURIComponent(token)}`)
       .then(res => res.json())
       .then(data => {
         if (data.defaultUser) {
@@ -34,16 +34,15 @@ const Settings = () => {
         }
         if (data.people) setPeople(data.people);
       });
-  }, [session]);
+  }, [token]);
 
   // Save default user settings
   const saveDefault = async () => {
-    if (!session?.user?.email) return;
+    if (!token) return;
     await fetch("/api/user-settings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        userId: session.user.email,
         defaultName,
         nightscoutAddress: defaultUrl,
         nightscoutApiSecret: defaultSecret,
@@ -54,12 +53,11 @@ const Settings = () => {
 
   // Save managed people
   const savePeople = async (newPeople: Person[]) => {
-    if (!session?.user?.email) return;
+    if (!token) return;
     await fetch("/api/user-settings", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        userId: session.user.email,
         people: newPeople,
       }),
     });
@@ -119,6 +117,18 @@ const Settings = () => {
     setPersonUrl("");
     setPersonSecret("");
   };
+
+  if (!token) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-md">
+            <h2 className="text-xl font-bold mb-4">Please log in to view settings.</h2>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

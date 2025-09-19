@@ -1,49 +1,37 @@
-// // import { SessionProvider } from "next-auth/react"; // Original import
-// import React, { useState, useEffect } from 'react';
-// import dynamic from 'next/dynamic';
-// import '../styles/globals.css';
-
-// // Dynamically import SessionProvider to ensure it's client-side rendered
-// const SessionProvider = dynamic(
-//   () => import("next-auth/react").then((mod) => mod.SessionProvider),
-//   { ssr: false }
-// );
-
-// function MyApp({ Component, pageProps }) {
-//   const [isMounted, setIsMounted] = useState(false);
-
-//   useEffect(() => {
-//     setIsMounted(true);
-//   }, []);
-
-//   if (!isMounted) {
-//     // Return null (or a loading spinner) until the component has mounted on the client.
-//     // This prevents SessionProvider and its internal hooks from running prematurely.
-//     return null;
-//   }
-
-//   return (
-//     <SessionProvider>
-//       <Component {...pageProps} />
-//     </SessionProvider>
-//   );
-// }
-// export default MyApp;
-
-
-// src/pages/_app.tsx
-import React from 'react';
-import { SessionProvider } from "next-auth/react";
+import React, { createContext, useState, useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import '../styles/globals.css';
+import { App as CapApp } from '@capacitor/app';
+
+export const AuthContext = createContext<{ token: string | null, setToken: (t: string | null) => void }>({
+  token: null,
+  setToken: () => {},
+});
 
 function MyApp({ Component, pageProps }: AppProps) {
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Listen for deep link events
+    CapApp.addListener('appUrlOpen', (data) => {
+      // Example: myapp://auth?token=JWT
+      const url = new URL(data.url);
+      if (url.pathname === "/auth" && url.searchParams.get("token")) {
+        const receivedToken = url.searchParams.get("token");
+        setToken(receivedToken);
+        localStorage.setItem("authToken", receivedToken!);
+      }
+    });
+    // On mount, restore token from localStorage
+    const storedToken = localStorage.getItem("authToken");
+    if (storedToken) setToken(storedToken);
+  }, []);
+
   return (
-    <SessionProvider session={pageProps.session}>
+    <AuthContext.Provider value={{ token, setToken }}>
       <Component {...pageProps} />
-    </SessionProvider>
+    </AuthContext.Provider>
   );
 }
 
 export default MyApp;
-

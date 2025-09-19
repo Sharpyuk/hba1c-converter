@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useSession } from "next-auth/react";
+import React, { useState, useEffect, useContext } from 'react';
 import StatisticsWidget from '../components/StatisticsWidget';
 import AGPGraph from '../components/AGPGraph';
 import PercentileWidget from '../components/PercentileWidget';
 import CarbsChart from '../components/CarbsChart';
 import Layout from '../components/Layout';
 import GMI from '../components/GMI';
+import { AuthContext } from "./_app";
 
 interface Person {
   name: string;
@@ -16,7 +16,7 @@ interface Person {
 const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
 
 const Reports: React.FC = () => {
-  const { data: session } = useSession();
+  const { token } = useContext(AuthContext);
   const [range, setRange] = useState<string>('today');
   const [loading, setLoading] = useState<boolean>(false);
   const [graphData, setGraphData] = useState<any[]>([]);
@@ -27,14 +27,14 @@ const Reports: React.FC = () => {
 
   // Fetch default user and managed people
   useEffect(() => {
-    if (!session?.user?.email) return;
-    fetch(`/api/user-settings?userId=${encodeURIComponent(session.user.email)}`)
+    if (!token) return;
+    fetch(`/api/user-settings?token=${encodeURIComponent(token)}`)
       .then(res => res.json())
       .then(data => {
         if (data.defaultUser) setDefaultUser(data.defaultUser);
         if (data.people) setPeople(data.people);
       });
-  }, [session]);
+  }, [token]);
 
   const allTabs = [
     ...(defaultUser ? [defaultUser] : []),
@@ -45,13 +45,18 @@ const Reports: React.FC = () => {
   // Fetch carbs data based on the selected range and person
   useEffect(() => {
     const fetchCarbsData = async () => {
-      if (!selectedPerson?.nightscout_address) return;
-      const response = await fetch(`/api/carbs?range=${range}&nightscoutUrl=${encodeURIComponent(selectedPerson.nightscout_address)}`);
+      if (!selectedPerson?.nightscout_address || !token) return;
+      const response = await fetch(
+        `/api/carbs?range=${range}&nightscoutUrl=${encodeURIComponent(selectedPerson.nightscout_address)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const data = await response.json();
       setCarbsData(data);
     };
     fetchCarbsData();
-  }, [range, selectedPerson]);
+  }, [range, selectedPerson, token]);
 
   // Fetch graph data based on the selected range and person
   const fetchGraphData = async (range: string, url: string) => {
@@ -78,7 +83,10 @@ const Reports: React.FC = () => {
 
       const query = `find[dateString][$gte]=${startDate.toISOString()}&find[dateString][$lte]=${now.toISOString()}`;
       const response = await fetch(
-        `${url}/api/v1/entries.json?${query}&count=10000`
+        `${url}/api/v1/entries.json?${query}&count=10000`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
       );
 
       if (!response.ok) {
@@ -95,10 +103,22 @@ const Reports: React.FC = () => {
   };
 
   useEffect(() => {
-    if (selectedPerson?.nightscout_address) {
+    if (selectedPerson?.nightscout_address && token) {
       fetchGraphData(range, selectedPerson.nightscout_address);
     }
-  }, [range, selectedPerson]);
+  }, [range, selectedPerson, token]);
+
+  if (!token) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="bg-white p-6 rounded shadow-md">
+            <h2 className="text-xl font-bold mb-4">Please log in to view reports.</h2>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

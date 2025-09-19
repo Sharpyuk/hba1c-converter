@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import React, { useEffect, useState, useContext } from "react";
+import { AuthContext } from "./_app";
 
 const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
 const BG_THRESHOLD = 4.3;
 
 const HypoPage: React.FC = () => {
-  const { data: session } = useSession();
+  const { token } = useContext(AuthContext);
   const [nightscoutUrl, setNightscoutUrl] = useState(DEFAULT_NIGHTSCOUT_URL);
   const [urlLoaded, setUrlLoaded] = useState(false);
   const [currentBg, setCurrentBg] = useState<number | null>(null);
@@ -15,26 +15,22 @@ const HypoPage: React.FC = () => {
 
   // Fetch user's Nightscout URL
   useEffect(() => {
-    if (session?.user?.email) {
-      fetch(`/api/user-settings?userId=${session.user.email}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.defaultUser && data.defaultUser.nightscout_address) {
-            setNightscoutUrl(data.defaultUser.nightscout_address);
-          } else {
-            setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          }
-          setUrlLoaded(true);
-        })
-        .catch(() => {
+    if (!token) return;
+    fetch(`/api/user-settings?token=${encodeURIComponent(token)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.defaultUser && data.defaultUser.nightscout_address) {
+          setNightscoutUrl(data.defaultUser.nightscout_address);
+        } else {
           setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-          setUrlLoaded(true);
-        });
-    } else if (session === null) {
-      setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
-      setUrlLoaded(true);
-    }
-  }, [session]);
+        }
+        setUrlLoaded(true);
+      })
+      .catch(() => {
+        setNightscoutUrl(DEFAULT_NIGHTSCOUT_URL);
+        setUrlLoaded(true);
+      });
+  }, [token]);
 
   // Fetch current blood glucose
   useEffect(() => {
@@ -64,7 +60,10 @@ const HypoPage: React.FC = () => {
     setRegistering(true);
     fetch("/api/nightscout-hypo", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({
         glucose: currentBg,
       }),
@@ -76,6 +75,10 @@ const HypoPage: React.FC = () => {
       .catch(() => setMessage("Failed to register hypo."))
       .finally(() => setRegistering(false));
   };
+
+  if (!token) {
+    return <div className="max-w-lg mx-auto mt-10 p-6 bg-white shadow-md rounded-lg text-center">Please log in to register a hypo.</div>;
+  }
 
   if (!urlLoaded || currentBg === null) return <div>Loading...</div>;
 

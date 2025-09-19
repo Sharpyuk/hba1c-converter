@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useSession, signOut, signIn } from "next-auth/react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import Link from "next/link";
 import { Bars3Icon, ArrowRightCircleIcon } from "@heroicons/react/24/outline";
+import { AuthContext } from "../pages/_app";
 
 export default function Layout({ children }) {
   const [isMounted, setIsMounted] = useState(false);
-  const { data: session } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { token, setToken } = useContext(AuthContext);
 
   useEffect(() => {
     setIsMounted(true);
 
-    // Close dropdown on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
@@ -56,7 +55,7 @@ export default function Layout({ children }) {
 
           {/* Right Side: Login or Dropdown Menu */}
           <div className="relative" ref={dropdownRef}>
-            {session ? (
+            {token ? (
               <>
                 {/* Burger Menu for Logged-In Users */}
                 <button
@@ -73,7 +72,7 @@ export default function Layout({ children }) {
                   >
                     <div className="px-4 py-2 border-b">
                       <p className="text-sm font-semibold text-gray-700">
-                        Logged in as {session.user?.name || session.user?.email}
+                        Logged in
                       </p>
                     </div>
                     <Link
@@ -84,7 +83,10 @@ export default function Layout({ children }) {
                       Settings
                     </Link>
                     <button
-                      onClick={() => signOut()}
+                      onClick={() => {
+                        setToken(null);
+                        localStorage.removeItem("authToken");
+                      }}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 bg-white hover:bg-purple-200 rounded transition duration-200 focus:outline-none"
                       role="menuitem"
                     >
@@ -96,13 +98,13 @@ export default function Layout({ children }) {
             ) : (
               <>
                 {/* Login Button for Logged-Out Users */}
-                <button
-                  onClick={() => signIn("google")}
+                <Link
+                  href="/"
                   className="flex items-center space-x-2 px-3 py-2 rounded hover:bg-purple-200 transition duration-300 ease-in-out"
                 >
                   <ArrowRightCircleIcon className="h-6 w-6 text-white" />
                   <span className="text-sm font-semibold">Login</span>
-                </button>
+                </Link>
               </>
             )}
           </div>

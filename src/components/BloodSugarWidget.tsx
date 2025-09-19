@@ -11,6 +11,8 @@ import {
   ChartOptions,
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import { useContext } from "react";
+import { AuthContext } from "../pages/_app";
 
 ChartJS.register(annotationPlugin);
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -45,9 +47,15 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
   // Use prop or fallback to default
   const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
 
+  const { token } = useContext(AuthContext);
+
   const fetchBloodSugar = async () => {
     try {
-      const response = await fetch(`${url}/api/v1/entries.json?count=1`);
+      const response = await fetch(`${url}/api/v1/entries.json?count=1`, {
+        headers: token
+          ? { Authorization: `Bearer ${token}` }
+          : {},
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch blood sugar data');
       }
@@ -74,8 +82,12 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
       if (range === '1w') count = 2016;
 
       const response = await fetch(
-        `${url}/api/v1/entries.json?count=${count}`
-      );
+        `${url}/api/v1/entries.json?count=${count}`,
+        {
+          headers: token
+            ? { Authorization: `Bearer ${token}` }
+            : {},
+        });
       if (!response.ok) {
         throw new Error('Failed to fetch graph data');
       }
