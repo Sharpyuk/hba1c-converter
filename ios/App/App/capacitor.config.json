@@ -1,0 +1,9 @@
+{
+	"appId": "com.dejunked.health",
+	"appName": "Dejunked Health",
+	"webDir": "out",
+	"packageClassList": [
+		"AppPlugin",
+		"CAPBrowserPlugin"
+	]
+}
