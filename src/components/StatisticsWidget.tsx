@@ -28,11 +28,12 @@ interface StatisticsWidgetProps {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   nightscoutUrl: string; 
+  selectedPerson?: string ; 
 }
 
 const safeNumber = (value: number) => (isNaN(value) || value === undefined ? 0 : value);
 
-const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, loading, setLoading, nightscoutUrl }) => {
+const StatisticsWidget: React.FC<StatisticsWidgetProps> = ({ range, setRange, loading, setLoading, nightscoutUrl, selectedPerson  }) => {
   const [timeInRange, setTimeInRange] = useState<number>(0);
   const [timeAboveRange, setTimeAboveRange] = useState<number>(0);
   const [timeBelowRange, setTimeBelowRange] = useState<number>(0);
@@ -326,7 +327,7 @@ const hasInsulinData =
         </a>
       </div>
 
-      <div className="flex justify-center mb-4 space-x-2">
+      <div className="flex justify-center mb-4 gap-2 sm:gap-4">
         <button
           onClick={() => setRange('today')}
           className={`px-4 py-2 rounded-md font-semibold ${
@@ -409,6 +410,7 @@ const hasInsulinData =
             </tr>
           </tbody>
         </table>
+        {selectedPerson == "Sharpy" && (
         <table className="table-auto w-full text-left border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100 col-span-3">
@@ -448,6 +450,7 @@ const hasInsulinData =
             </tr>
           </tbody>
         </table>
+        )}
 
         {hasCarbData ? (
           <table className="table-auto w-full text-left border-collapse border border-gray-300">

@@ -110,7 +110,7 @@ const GMI: React.FC<GMIProps> = ({ nightscoutUrl }) => {
       ) : (
         <p className="text-center text-gray-500">No data available for the selected range.</p>
       )}
-      <div className="flex justify-center mt-4 space-x-2">
+      <div className="flex justify-center mt-4 space-x-2 gap-2 sm:gap-4">
         <button
           onClick={() => setRange('1d')}
           className={`px-4 py-2 rounded-md font-semibold ${

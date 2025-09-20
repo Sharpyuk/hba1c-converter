@@ -151,6 +151,7 @@ const Reports: React.FC = () => {
                   loading={loading}
                   setLoading={setLoading}
                   nightscoutUrl={selectedPerson.nightscout_address}
+                  selectedPerson={selectedPerson.name}
                 />
               </div>
               <div className="mb-6">

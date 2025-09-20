@@ -277,10 +277,10 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
   };
 
   return (
-    <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center w-full relative`}>
+    <div className={`${getBackgroundColor(mmolL)} text-white p-4 text-center w-full relative rounded-md`}>
       {/* Hypo Button */}
       <button
-        className="absolute top-10 left-10 z-20 bg-yellow-400 hover:bg-yellow-300 rounded-full shadow-2xl shadow-black p-2"
+        className="absolute top-10 left-5 z-20 bg-yellow-400 hover:bg-yellow-300 rounded-full shadow-2xl shadow-black p-2"
         style={{ width: 48, height: 48, fontSize: 32, lineHeight: "32px"}}
         title="Register Hypo"
         onClick={handleHypoClick}
@@ -337,7 +337,7 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
           <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
             <Line data={chartData} options={chartOptions} />
           </div>
-          <div className="flex justify-center mt-6 space-x-4">
+          <div className="flex justify-center mt-4 gap-2 sm:gap-4">
             <button
               onClick={() => setRange('3h')}
               className={`px-4 py-2 rounded-md font-semibold ${
