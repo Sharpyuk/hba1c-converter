@@ -309,7 +309,7 @@ const hasInsulinData =
 
 
   return (
-    <div className="bg-white p-6 rounded-md shadow-md">
+    <div className="bg-white p-2 rounded-md shadow-md">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Statistics</h2>
         <a
@@ -369,7 +369,7 @@ const hasInsulinData =
           3 Months
         </button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto w-full">
         <table className="table-auto w-full text-left border-collapse border border-gray-300">
           <thead>
             <tr className="bg-gray-100 col-span-3">
