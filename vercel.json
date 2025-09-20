@@ -1,9 +1,7 @@
 {
     "build": {
-      "env": {},
-      "npm": {
-        "installCommand": "npm install"
+      "env": {}
       }
-    }
+    
   }
   
