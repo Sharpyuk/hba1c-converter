@@ -327,10 +327,10 @@ const hasInsulinData =
         </a>
       </div>
 
-      <div className="flex justify-center mb-4 gap-2 sm:gap-4">
+      <div className="flex justify-center mb-4 gap-2 sm:gap-1">
         <button
           onClick={() => setRange('today')}
-          className={`px-4 py-2 rounded-md font-semibold ${
+          className={`px-4 py-2 rounded-md font-semibold text-sm sm:text-base ${
             range === 'today' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
           } hover:bg-blue-500 hover:text-white transition`}
         >
@@ -338,7 +338,7 @@ const hasInsulinData =
         </button>
         <button
           onClick={() => setRange('yesterday')}
-          className={`px-4 py-2 rounded-md font-semibold ${
+          className={`px-4 py-2 rounded-md font-semibold text-sm sm:text-base ${
             range === 'yesterday' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
           } hover:bg-blue-500 hover:text-white transition`}
         >
@@ -346,7 +346,7 @@ const hasInsulinData =
         </button>
         <button
           onClick={() => setRange('1w')}
-          className={`px-4 py-2 rounded-md font-semibold ${
+          className={`px-4 py-2 rounded-md font-semibold text-sm sm:text-base ${
             range === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
           } hover:bg-blue-500 hover:text-white transition`}
         >
@@ -354,7 +354,7 @@ const hasInsulinData =
         </button>
         <button
           onClick={() => setRange('1m')}
-          className={`px-4 py-2 rounded-md font-semibold ${
+          className={`px-4 py-2 rounded-md font-semibold text-sm sm:text-base ${
             range === '1m' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
           } hover:bg-blue-500 hover:text-white transition`}
         >
@@ -362,7 +362,7 @@ const hasInsulinData =
         </button>
         <button
           onClick={() => setRange('3m')}
-          className={`px-4 py-2 rounded-md font-semibold ${
+          className={`px-4 py-2 rounded-md font-semibold text-sm sm:text-base ${
             range === '3m' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
           } hover:bg-blue-500 hover:text-white transition`}
         >

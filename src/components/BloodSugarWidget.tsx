@@ -337,7 +337,7 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
           <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
             <Line data={chartData} options={chartOptions} />
           </div>
-          <div className="flex justify-center mt-4 gap-2 sm:gap-4">
+          <div className="flex justify-center mt-4 gap-2 sm:gap-1">
             <button
               onClick={() => setRange('3h')}
               className={`px-4 py-2 rounded-md font-semibold ${
