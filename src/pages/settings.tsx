@@ -231,19 +231,21 @@ const Settings = () => {
                     <td className="px-2 py-1 border">
                       {person.nightscout_api_secret ? "••••••••" : <span className="text-gray-400">None</span>}
                     </td>
-                    <td className="px-2 py-1 border">
-                      <button
-                        className="text-blue-600 underline text-xs mr-2"
-                        onClick={() => handleEdit(idx)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="text-red-600 underline text-xs"
-                        onClick={() => handleRemove(idx)}
-                      >
-                        Remove
-                      </button>
+                    <td className="px-2 py-1 border ">
+                      <div className="flex gap-1">
+                        <button
+                          className="text-white text-xs mr-1"
+                          onClick={() => handleEdit(idx)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-white text-xs"
+                          onClick={() => handleRemove(idx)}
+                        >
+                          X
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
