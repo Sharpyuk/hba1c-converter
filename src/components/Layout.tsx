@@ -77,6 +77,18 @@ export default function Layout({ children }) {
                       </p>
                     </div>
                     <Link
+                      href="/about"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-200 rounded transition duration-200"
+                    >
+                      About Me
+                    </Link>
+                    <Link
+                      href="/privacy"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-200 rounded transition duration-200"
+                    >
+                      Privacy Policy
+                    </Link>
+                    <Link
                       href="/settings"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-200 rounded transition duration-200"
                       role="menuitem"

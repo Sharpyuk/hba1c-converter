@@ -105,48 +105,71 @@ const Reports: React.FC = () => {
       <div className="min-h-screen bg-gray-50 pt-20 sm:px-6 lg:px-8">
         {/* Tabs for people */}
         {allTabs.length > 0 && (
-          <div className="flex gap-2 mb-4 max-w-screen-sm mx-auto">
-            {allTabs.map((person, idx) => (
-              <button
-                key={person.name + idx}
-                className={`px-4 py-2 rounded-t ${idx === selectedIdx ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-                onClick={() => setSelectedIdx(idx)}
-              >
-                {person.name}
-              </button>
-            ))}
+          <div className="w-full max-w-screen-sm mx-auto">
+            <div className="flex bg-gray-100 rounded-t-lg border-b-2 border-gray-300">
+              {allTabs.map((person, idx) => (
+                <button
+                  key={person.name + idx}
+                  className={`px-6 py-2 font-semibold transition-colors duration-200
+                    rounded-t-lg
+                    focus:outline-none
+                    border-l-2 border-t-2 border-r-2
+                    ${idx === selectedIdx
+                      ? "bg-white border-blue-600 text-blue-700 z-10 hover:bg-gray-100"
+                      : "bg-gray-100 border-gray-400 text-gray-500 hover:text-blue-600 hover:bg-white"
+                    }`}
+                  style={{
+                    marginBottom: idx === selectedIdx ? '-2px' : '0',
+                    position: idx === selectedIdx ? 'relative' : 'static',
+                    top: idx === selectedIdx ? '2px' : '0',
+                    borderLeft: '1px solid #9ca3af',
+                    borderTop: '1px solid #9ca3af',
+                    borderRight: '1px solid #9ca3af',
+                    borderBottom: 'none',
+                  }}
+                  onClick={() => setSelectedIdx(idx)}
+                >
+                  {person.name}
+                </button>
+              ))}
+            </div>
+            {/* Lower half: tab content area with matching borders */}
+            <div
+              className="bg-white rounded-b-lg shadow p-4 border-2 border-t-0 border-gray-300 w-full max-w-screen-sm mx-auto"
+              style={{
+                borderTop: 'none',
+                borderLeft: '1px solid #9ca3af',
+                borderRight: '1px solid #9ca3af',
+                borderBottom: '1px solid #9ca3af',
+                borderRadius: '0 0 0.75rem 0.75rem'
+              }}
+            >
+              <div className="mb-6">
+                <StatisticsWidget
+                  range={range}
+                  setRange={setRange}
+                  loading={loading}
+                  setLoading={setLoading}
+                  nightscoutUrl={selectedPerson.nightscout_address}
+                />
+              </div>
+              <div className="mb-6">
+                {selectedPerson && (
+                  <GMI nightscoutUrl={selectedPerson.nightscout_address} />
+                )}
+              </div>
+              <div className="mb-6">
+                <AGPGraph range={range} graphData={graphData} />
+              </div>
+              <div className="mb-6">
+                <CarbsChart range={range} carbsData={carbsData} />
+              </div>
+              <div className="mb-6">
+                <PercentileWidget range={range} nightscoutUrl={selectedPerson.nightscout_address} />
+              </div>
+            </div>
           </div>
         )}
-
-        {/* StatisticsWidget */}
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          <StatisticsWidget
-            range={range}
-            setRange={setRange}
-            loading={loading}
-            setLoading={setLoading}
-            nightscoutUrl={selectedPerson.nightscout_address}
-          />
-        </div>
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          {selectedPerson && (
-            <GMI nightscoutUrl={selectedPerson.nightscout_address} />
-          )}
-        </div>
-        {/* AGPGraph */}
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          <AGPGraph range={range} graphData={graphData} />
-        </div>
-
-        {/* CarbsChart */}
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          <CarbsChart range={range} carbsData={carbsData} />
-        </div>
-
-        {/* PercentileWidget */}
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          <PercentileWidget range={range} nightscoutUrl={selectedPerson.nightscout_address} />
-        </div>
       </div>
     </Layout>
   );

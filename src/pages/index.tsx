@@ -42,16 +42,48 @@ const Home = () => {
       <div className="min-h-screen bg-gray-50 pt-16 sm:px-6 lg:px-8 w-full">
         <div className="mb-6 w-full max-w-screen-sm mx-auto">
           {allTabs.length > 0 && (
-            <div className="flex gap-2 mb-4">
-              {allTabs.map((person, idx) => (
-                <button
-                  key={person.name + idx}
-                  className={`px-4 py-2 rounded-t ${idx === selectedIdx ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-                  onClick={() => setSelectedIdx(idx)}
-                >
-                  {person.name}
-                </button>
-              ))}
+            <div className="w-full max-w-screen-sm mx-auto">
+              <div className="flex bg-gray-100 rounded-t-lg border-b-2 border-gray-300">
+                {allTabs.map((person, idx) => (
+                  <button
+                    key={person.name + idx}
+                    className={`px-6 py-2 font-semibold transition-colors duration-200
+                      rounded-t-lg
+                      focus:outline-none
+                      border-l-2 border-t-2 border-r-2
+                      ${idx === selectedIdx
+                        ? "bg-white border-blue-600 text-blue-700 z-10 hover:bg-gray-100"
+                        : "bg-gray-100 border-gray-400 text-gray-500 hover:text-blue-600 hover:bg-white"
+                      }`}
+                    style={{
+                      marginBottom: idx === selectedIdx ? '-2px' : '0',
+                      position: idx === selectedIdx ? 'relative' : 'static',
+                      top: idx === selectedIdx ? '2px' : '0',
+
+                      borderLeft: '1px solid #9ca3af',   // blue-600
+                      borderTop: '1px solid #9ca3af',
+                      borderRight: '1px solid #9ca3af',
+                      borderBottom: 'none',
+                    }}
+                    onClick={() => setSelectedIdx(idx)}
+                  >
+                    {person.name}
+                  </button>
+                ))}
+              </div>
+              <div className="bg-white rounded-b-lg shadow p-4 border-2 border-t-0 border-gray-300">
+                {/* Tab content goes here */}
+                {selectedPerson && (
+                  <>
+                    <BloodSugarWidget nightscoutUrl={selectedPerson.nightscout_address} />
+                    <IOBCOBWidget nightscoutUrl={selectedPerson.nightscout_address} />
+                    <HypoTreatmentsWidget 
+                      personId={selectedIdx === 0 ? selectedPerson.name : selectedPerson.name}
+                      nightscoutUrl={selectedPerson.nightscout_address} 
+                    />
+                  </>
+                )}
+              </div>
             </div>
           )}
           {selectedPerson && (
