@@ -86,35 +86,12 @@ const Home = () => {
               </div>
             </div>
           )}
-          {selectedPerson && (
-            <>
-              <BloodSugarWidget nightscoutUrl={selectedPerson.nightscout_address} />
-              <IOBCOBWidget nightscoutUrl={selectedPerson.nightscout_address} />
-            </>
-          )}
+          
         </div>
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          {selectedPerson && (
-            <HypoTreatmentsWidget 
-              personId={selectedIdx === 0 ? session?.user?.email : selectedPerson.name}
-              nightscoutUrl={selectedPerson.nightscout_address} 
-            />
-          )}
-        </div>
-        {/* 
-        <div className="mb-6 w-full max-w-screen-sm mx-auto">
-          <CarbCalculatorWidget />
-        </div>
-        */}
-
-        {/* 
-        <div className="flex items-center justify-center mt-10 w-full max-w-screen-sm mx-auto">
-          <ConverterForm />
-        </div>
-        */}
+        
         <div className="text-center mt-6">
-          <Link href="/reports" className="text-blue-500 underline">
-            View Reports
+          <Link href="/privacy" className="text-blue-500 underline">
+            Privacy Policy
           </Link>
         </div>
       </div>
