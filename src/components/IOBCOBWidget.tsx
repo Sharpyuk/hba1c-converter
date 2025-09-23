@@ -532,17 +532,18 @@ const handleDelete = async (id: string) => {
                 Hide
               </button>
             </div>
-            {treatmentsForHour.filter(t => (t.carbs || t.insulin)).length === 0 ? (
-              <div className="text-gray-500 italic">No treatments for this hour.</div>
-            ) : (
-              <table className="w-full text-sm border border-blue-200 rounded overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[340px] text-xs border border-blue-200 rounded overflow-hidden">
                 <thead>
                   <tr className="bg-blue-600 text-white">
-                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Time</th>
-                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Carbs (g)</th>
-                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Insulin (U)</th>
-                    <th className="px-2 py-1 border-blue-200 text-center font-semibold">Blood Glucose (mmol/L)</th>
-                    <th />
+                    <th className="px-1 py-1 border-blue-200 text-center font-semibold">Time</th>
+                    <th className="px-1 py-1 border-blue-200 text-center font-semibold">Carbs</th>
+                    <th className="px-1 py-1 border-blue-200 text-center font-semibold">Insulin</th>
+                    <th className="px-1 py-1 border-blue-200 text-center font-semibold">
+                      <span className="block sm:hidden">BG</span>
+                      <span className="hidden sm:block">Blood Glucose (mmol/L)</span>
+                    </th>
+                    <th className="px-1 py-1 border-blue-200"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -554,55 +555,51 @@ const handleDelete = async (id: string) => {
                       const hasNotes =
                         (parsedNotes && Object.keys(parsedNotes).length > 0) ||
                         (t.notes && t.notes.trim() !== "");
-                      // Try to get blood glucose from t.glucose, or from parsedNotes.bloodGlucoseInput (Omnipod 5), or undefined
                       let bloodGlucose: number | undefined = undefined;
                       if (typeof t.glucose === "number") {
                         bloodGlucose = t.glucose;
                       } else if (parsedNotes && parsedNotes.bloodGlucoseInput !== undefined) {
                         bloodGlucose = parsedNotes.bloodGlucoseInput;
-                      } else {
-                        bloodGlucose = undefined;
                       }
-
-                      // Always convert if value is large (mg/dL format)
                       if (typeof bloodGlucose === "number" && bloodGlucose > 100) {
                         bloodGlucose = (bloodGlucose / 18) / 100;
                       }
-                      // Detect hypo treatment
                       const hypo = isHypoTreatment(t);
                       return (
                         <React.Fragment key={t._id || idx}>
                           <tr className={`even:bg-blue-50${hypo ? " bg-yellow-100" : ""}`}>
-                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                            <td className="px-1 py-1 border-blue-100 text-center font-mono">
                               {new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </td>
-                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                            <td className="px-1 py-1 border-blue-100 text-center font-mono">
                               {t.carbs ?? ""}
                             </td>
-                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                            <td className="px-1 py-1 border-blue-100 text-center font-mono">
                               {t.insulin ?? ""}
                             </td>
-                            <td className="px-2 py-1 border-blue-100 text-center font-mono">
+                            <td className="px-1 py-1 border-blue-100 text-center font-mono">
                               {typeof bloodGlucose === "number" ? bloodGlucose.toFixed(1) : ""}
                             </td>
-                            <td className="px-2 py-1 border-blue-100 text-center">
-                              <button
-                                className="text-xs text-white mr-2"
-                                onClick={() => handleEdit(t)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="text-xs text-white"
-                                onClick={() => handleDelete(t._id)}
-                              >
-                                X
-                              </button>
+                            <td className="px-1 py-1 border-blue-100 text-center">
+                              <div className="flex gap-1 justify-center">
+                                <button
+                                  className="text-xs text-white bg-blue-600 px-2 py-1 rounded"
+                                  onClick={() => handleEdit(t)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="text-xs text-white bg-red-600 px-2 py-1 rounded"
+                                  onClick={() => handleDelete(t._id)}
+                                >
+                                  X
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           {hasNotes && (
                             <tr>
-                              <td className="px-2 py-1 border-blue-100 bg-blue-50" colSpan={4}>
+                              <td className="px-1 py-1 border-blue-100 bg-blue-50" colSpan={5}>
                                 {hypo && (
                                   <span className="inline-block bg-yellow-200 text-yellow-900 px-2 py-1 rounded mr-2 font-semibold text-xs">
                                     Hypo Treatment
@@ -621,7 +618,7 @@ const handleDelete = async (id: string) => {
                     })}
                 </tbody>
               </table>
-            )}
+            </div>
           </div>
         )}
         {/* TDD and Total Carbs boxes below the chart, inside the white box */}
