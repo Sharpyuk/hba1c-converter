@@ -25,9 +25,10 @@ const DEFAULT_NIGHTSCOUT_URL = "https://sharpy-cgm.up.railway.app";
 
 interface BloodSugarWidgetProps {
   nightscoutUrl?: string;
+  activePersonId?: string;
 }
 
-const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) => {
+const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl, activePersonId  }) => {
   const [bloodSugar, setBloodSugar] = useState<number | null>(null);
   const [timestamp, setTimestamp] = useState<string | null>(null);
   const [trend, setTrend] = useState<string | null>(null);
@@ -270,11 +271,13 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
     setRegisteringHypo(true);
     setHypoMessage("Registering hypo...");
     try {
+      console.log("Registering hypo for person:", activePersonId);
       const res = await fetch("/api/nightscout-hypo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           glucose: mmolL,
+          personId: activePersonId,
         }),
       });
       const data = await res.json();
@@ -297,10 +300,19 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
 
   const manualBGPoints = getManualBGCheckPoints(graphData, manualBGChecks);
   // Find maxY for the graph
-const maxY = Math.max(
-  ...graphData.map((entry) => convertToMmolL(entry.sgv) ?? 0),
-  15
-);
+  const maxY = Math.max(
+    ...graphData.map((entry) => convertToMmolL(entry.sgv) ?? 0),
+    15
+  );
+
+  const minY = Math.min(
+    ...graphData
+      .map((entry) => convertToMmolL(entry.sgv))
+      .filter((v) => v !== null && !isNaN(v as number)) as number[],
+    3
+  );
+  const yMin = Math.max(Math.floor(minY) - 1, 1.5); // Always leave a margin below the lowest value, but never below 1.5
+
 
   // Build scatter points for manual BG checks
   const manualBGScatterData = manualBGChecks.map(bg => {
@@ -334,7 +346,10 @@ const maxY = Math.max(
     datasets: [
       {
         label: 'Blood Sugar (mmol/L)',
-        data: graphData.map((entry) => convertToMmolL(entry.sgv)),
+        data: graphData.map((entry) => {
+          const mmol = convertToMmolL(entry.sgv);
+          return mmol !== null && !isNaN(mmol) ? mmol : null; // Use null for missing data
+        }),
         borderColor: 'rgba(75, 192, 192, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         tension: 0.4,
@@ -445,7 +460,7 @@ const maxY = Math.max(
           text: 'Blood Sugar (mmol/L)',
         },
         beginAtZero: false,
-        min: zoom ? undefined : 3,
+        min: zoom ? undefined : yMin,
         max: zoom ? undefined : 15,
       },
     },

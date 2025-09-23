@@ -13,7 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Get personId from query or body (for DELETE, PUT, POST)
   const personId = req.query.personId || req.body.personId || session.user.email;
-
+  console.log("personId received:", personId);
+  
   let nightscoutAddress: string | undefined;
   let nightscoutApiSecret: string | undefined;
 

@@ -75,7 +75,7 @@ const Home = () => {
                 {/* Tab content goes here */}
                 {selectedPerson && (
                   <>
-                    <BloodSugarWidget nightscoutUrl={selectedPerson.nightscout_address} />
+                    <BloodSugarWidget nightscoutUrl={selectedPerson.nightscout_address} activePersonId={selectedPerson.name} />
                     <IOBCOBWidget nightscoutUrl={selectedPerson.nightscout_address} />
                     <HypoTreatmentsWidget 
                       personId={selectedIdx === 0 ? selectedPerson.name : selectedPerson.name}
