@@ -107,7 +107,7 @@ function renderOmnipod5Table(parsed: any) {
     { label: "Carbs Input", key: "carbsInput", unit: "g" },
     { label: "Insulin On Board", key: "insulinOnBoard", unit: "U" },
     { label: "Total Insulin Recommendation", key: "totalInsulinRecommendation", unit: "U" },
-    { label: "Blood Glucose Input", key: "bloodGlucoseInput", unit: "mg/dL" },
+    { label: "Blood Glucose Input", key: "bloodGlucoseInput", unit: "mmol/L" },
     { label: "Insulin Programmed", key: "insulinProgrammed", unit: "U" },
     { label: "Insulin Recommendation For Carbs", key: "insulinRecommendationForCarbs", unit: "U" },
     { label: "Insulin Recommendation For Correction", key: "insulinRecommendationForCorrection", unit: "U" },
@@ -120,7 +120,10 @@ function renderOmnipod5Table(parsed: any) {
       <table className="bg-white border border-blue-200 rounded shadow text-xs min-w-[320px]">
         <tbody>
           {fields.map(({ label, key, unit }) => {
-            const value = parsed[key];
+            let value = parsed[key];
+            if (key === "bloodGlucoseInput" && typeof value === "number" && value > 100) {
+              value = (value / 18) / 100;
+            }
             if (
               (key === "bloodGlucoseInput" && (value === null || value === undefined)) ||
               (key === "override" && (value === null || value === undefined))
@@ -136,7 +139,11 @@ function renderOmnipod5Table(parsed: any) {
                   {value !== null && value !== undefined && value !== ""
                     ? (
                         <>
-                          <span className="font-mono">{value}</span>
+                          <span className="font-mono">
+                            {key === "bloodGlucoseInput" && typeof value === "number"
+                              ? value.toFixed(1)
+                              : value}
+                          </span>
                           {unit && <span className="ml-1 text-xs text-blue-500">{unit}</span>}
                         </>
                       )
@@ -208,6 +215,11 @@ const handleEdit = (t: any) => {
 const handleEditSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!editing) return;
+  // Convert mmol/L to mg/dL * 100 before storing
+  let glucoseToStore = parseFloat(editGlucose);
+  if (!isNaN(glucoseToStore) && glucoseToStore < 100) {
+    glucoseToStore = glucoseToStore * 100 * 18;
+  }
   await fetch(`/api/nightscout-hypo`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -215,7 +227,7 @@ const handleEditSubmit = async (e: React.FormEvent) => {
       id: editing._id,
       carbs: parseFloat(editCarbs),
       insulin: parseFloat(editInsulin),
-      glucose: parseFloat(editGlucose),
+      glucose: glucoseToStore,
       notes: editNotes,
       // Optionally add personId if needed
     }),
@@ -546,8 +558,15 @@ const handleDelete = async (id: string) => {
                       let bloodGlucose: number | undefined = undefined;
                       if (typeof t.glucose === "number") {
                         bloodGlucose = t.glucose;
-                      } else if (parsedNotes && typeof parsedNotes.bloodGlucoseInput === "number") {
+                      } else if (parsedNotes && parsedNotes.bloodGlucoseInput !== undefined) {
                         bloodGlucose = parsedNotes.bloodGlucoseInput;
+                      } else {
+                        bloodGlucose = undefined;
+                      }
+
+                      // Always convert if value is large (mg/dL format)
+                      if (typeof bloodGlucose === "number" && bloodGlucose > 100) {
+                        bloodGlucose = (bloodGlucose / 18) / 100;
                       }
                       // Detect hypo treatment
                       const hypo = isHypoTreatment(t);

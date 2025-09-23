@@ -41,9 +41,122 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
   const [hypoMessage, setHypoMessage] = useState<string | null>(null);
   const [showHypoConfirm, setShowHypoConfirm] = useState(false);
   const [registeringHypo, setRegisteringHypo] = useState(false);
+  const [hypoTreatments, setHypoTreatments] = useState<{ dateString: string }[]>([]);
+  const [manualBGChecks, setManualBGChecks] = useState<any[]>([]);
 
   // Use prop or fallback to default
   const url = nightscoutUrl || DEFAULT_NIGHTSCOUT_URL;
+
+  // Fetch manual blood glucose entries (type=mbg)
+  useEffect(() => {
+    const fetchManualBG = async () => {
+      try {
+        const now = new Date();
+        let startDate = new Date();
+        if (range === '3h') startDate.setHours(now.getHours() - 3);
+        else if (range === '12h') startDate.setHours(now.getHours() - 12);
+        else if (range === '1d') startDate.setDate(now.getDate() - 1);
+        else if (range === '3d') startDate.setDate(now.getDate() - 3);
+        else if (range === '1w') startDate.setDate(now.getDate() - 7);
+
+        const apiUrl = `${url}/api/v1/treatments.json?find[eventType]=BG Check&find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lte]=${now.toISOString()}&count=1000`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Failed to fetch manual BG entries");
+        const data = await response.json();
+        setManualBGChecks(Array.isArray(data) ? data : []);
+      } catch {
+        setManualBGChecks([]);
+      }
+    };
+    fetchManualBG();
+  }, [range, url]);
+
+  // Fetch hypo treatments (reliable Nightscout query)
+  useEffect(() => {
+    const fetchHypoTreatments = async () => {
+      try {
+        // Use Nightscout treatments API and filter for Carb Correction entered by hba1c-converter
+        const now = new Date();
+        let startDate = new Date();
+        if (range === '3h') startDate.setHours(now.getHours() - 3);
+        else if (range === '12h') startDate.setHours(now.getHours() - 12);
+        else if (range === '1d') startDate.setDate(now.getDate() - 1);
+        else if (range === '3d') startDate.setDate(now.getDate() - 3);
+        else if (range === '1w') startDate.setDate(now.getDate() - 7);
+
+        const apiUrl = `${url}/api/v1/treatments.json?find[eventType]=Carb Correction&find[enteredBy]=hba1c-converter&find[created_at][$gte]=${startDate.toISOString()}&find[created_at][$lte]=${now.toISOString()}&count=1000`;
+
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Failed to fetch hypo treatments");
+        const data = await response.json();
+
+        // Map to array of treatment times
+        const hypoEvents = Array.isArray(data)
+          ? data.map((t: any) => ({
+              dateString: t.created_at || t.dateString,
+            }))
+          : [];
+        setHypoTreatments(hypoEvents);
+      } catch (err) {
+        setHypoTreatments([]);
+      }
+    };
+    fetchHypoTreatments();
+  }, [range, url]);
+
+
+  // Helper: show only one Manual BG Check dot per BG Check entry, always at the top of the graph visually,
+  // but keep the correct BG value for tooltip/mouse-over
+  function getManualBGCheckPoints(graphData, manualBGChecks) {
+    // Track which manualBGChecks have been matched
+    const used = new Set();
+    return graphData.map((entry) => {
+      const entryTime = new Date(entry.dateString).getTime();
+      // Find the first unmatched BG Check within ±10 min
+      const matchIdx = manualBGChecks.findIndex(bg =>
+        !used.has(bg._id) &&
+        Math.abs(new Date(bg.created_at).getTime() - entryTime) < 10 * 60 * 1000
+      );
+      if (matchIdx !== -1) {
+        used.add(manualBGChecks[matchIdx]._id);
+        // Return the actual mmol/L value for tooltip, but add a custom property for display
+        const mmol = parseFloat((manualBGChecks[matchIdx].glucose / 18).toFixed(1));
+        return { y: mmol, _displayY: null }; // _displayY will be set later
+      }
+      return null;
+    });
+  }
+
+  // Helper: get manual BG Check points aligned to graphData
+//   function getManualBGCheckPoints(graphData, manualBGChecks) {
+//     return graphData.map((entry) => {
+//       const entryTime = new Date(entry.dateString).getTime();
+//       const match = manualBGChecks.find(bg =>
+//         Math.abs(new Date(bg.created_at).getTime() - entryTime) < 10 * 60 * 1000
+//       );
+//       return match && typeof match.glucose === "number"
+//         ? parseFloat((match.glucose / 18).toFixed(1))
+//         : null;
+//     });
+// }
+
+  // Helper: get closest matching blood sugar entry for each hypo event
+  function getHypoPoints(graphData, hypoTreatments) {
+    const usedIndexes = new Set();
+    return graphData.map((entry, idx) => {
+      const entryTime = new Date(entry.dateString).getTime();
+      // Find a hypo event within ±10 min that hasn't been matched yet
+      const matchIdx = hypoTreatments.findIndex(h =>
+        !usedIndexes.has(h.dateString) &&
+        Math.abs(new Date(h.dateString).getTime() - entryTime) < 10 * 60 * 1000
+      );
+      if (matchIdx !== -1) {
+        usedIndexes.add(hypoTreatments[matchIdx].dateString);
+        return convertToMmolL(entry.sgv);
+      }
+      return null;
+    });
+}
 
   const fetchBloodSugar = async () => {
     try {
@@ -181,7 +294,31 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
 
   // --- End Hypo Button Logic ---
 
-  const chartData = {
+
+  const manualBGPoints = getManualBGCheckPoints(graphData, manualBGChecks);
+  // Find maxY for the graph
+const maxY = Math.max(
+  ...graphData.map((entry) => convertToMmolL(entry.sgv) ?? 0),
+  15
+);
+
+  // Build scatter points for manual BG checks
+  const manualBGScatterData = manualBGChecks.map(bg => {
+    // Find the closest graphData point for x-axis alignment
+    const closestIdx = graphData.findIndex(entry =>
+      Math.abs(new Date(entry.dateString).getTime() - new Date(bg.created_at).getTime()) < 10 * 60 * 1000
+    );
+    if (closestIdx === -1) return null;
+    const mmol = parseFloat((bg.glucose / 18).toFixed(1));
+    return {
+      x: closestIdx, // category index
+      y: maxY - 5,
+      _realY: mmol,
+      _timestamp: bg.created_at,
+    };
+  }).filter(Boolean); // Remove nulls
+
+  const chartData = {    
     labels: graphData.map((entry) => {
       const date = new Date(entry.dateString);
       if (range === '3h' || range === '12h' || range === '1d') {
@@ -204,6 +341,31 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
         pointRadius: range === '3h' ? 3 : 0,
         pointHoverRadius: range === '3h' ? 6 : 0,
       },
+
+      // Hypo treatment points
+      {
+        label: 'Hypo Treatment',
+        data: getHypoPoints(graphData, hypoTreatments),
+        pointBackgroundColor: 'orange',
+        pointBorderColor: 'black',
+        pointRadius: 8,
+        showLine: false,
+        borderWidth: 0,
+        backgroundColor: 'rgba(255, 255, 0, 0.2)',
+        type: 'scatter',
+      },
+      {
+        label: 'Manual BG',
+        data: manualBGScatterData,
+        parsing: false,
+        pointBackgroundColor: 'red',
+        pointBorderColor: 'black',
+        pointRadius: 5,
+        showLine: false,
+        borderWidth: 0,
+        backgroundColor: 'rgba(255, 255, 0, 0.2)',
+        type: 'scatter',
+      },
     ],
   };
 
@@ -211,6 +373,19 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl }) =>
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
+      //...chartOptions.plugins,
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            // For Manual BG, show the real BG value in tooltip
+            if (context.dataset.label === "Manual BG" && context.raw && context.raw._realY !== undefined) {
+              return `Manual BG: ${context.raw._realY} mmol/L`;
+            }
+            // Default for other points
+            return `${context.dataset.label}: ${context.parsed.y} mmol/L`;
+          }
+        }
+      },
       legend: {
         display: false,
       },
