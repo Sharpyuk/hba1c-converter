@@ -33,24 +33,30 @@ export default function Layout({ children }) {
       <nav className="bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg fixed top-0 left-0 w-full z-50">
         <div className="container mx-auto flex justify-between items-center p-4">
           {/* Left Links */}
-          <div className="flex space-x-6">
+          <div className="flex space-x-1 sm:space-x-6">
             <Link
               href="/"
-              className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+              className="text-sm sm:text-lg font-semibold px-2 sm:px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
             >
               Home
             </Link>
             <Link
               href="/reports"
-              className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+              className="text-sm sm:text-lg font-semibold px-2 sm:px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
             >
               Reports
             </Link>
             <Link
               href="/tools"
-              className="text-lg font-semibold px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+              className="text-sm sm:text-lg font-semibold px-2 sm:px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
             >
               Tools
+            </Link>
+            <Link
+              href="/ultra"
+              className="text-sm sm:text-lg font-semibold px-2 sm:px-3 py-2 rounded hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+            >
+              Ultra
             </Link>
           </div>
 
