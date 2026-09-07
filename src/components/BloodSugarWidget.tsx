@@ -9,11 +9,16 @@ import {
   Tooltip,
   Legend,
   ChartOptions,
+  ScatterController,
+  ScatterControllerDatasetOptions,
 } from 'chart.js';
+import { ChartData, ChartDataset } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import { Chart } from 'react-chartjs-2';
 
 ChartJS.register(annotationPlugin);
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(annotationPlugin, ScatterController);
 
 interface BloodSugarData {
   sgv: number;
@@ -330,7 +335,7 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl, acti
     };
   }).filter(Boolean); // Remove nulls
 
-  const chartData = {    
+  const chartData: ChartData<'line' | 'scatter', any, string> =  {    
     labels: graphData.map((entry) => {
       const date = new Date(entry.dateString);
       if (range === '3h' || range === '12h' || range === '1d') {
@@ -355,6 +360,7 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl, acti
         tension: 0.4,
         pointRadius: range === '3h' ? 3 : 0,
         pointHoverRadius: range === '3h' ? 6 : 0,
+        type: 'line',
       },
 
       // Hypo treatment points
@@ -393,8 +399,12 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl, acti
         callbacks: {
           label: function(context) {
             // For Manual BG, show the real BG value in tooltip
-            if (context.dataset.label === "Manual BG" && context.raw && context.raw._realY !== undefined) {
-              return `Manual BG: ${context.raw._realY} mmol/L`;
+            if (
+              context.dataset.label === "Manual BG" &&
+              context.raw &&
+              (context.raw as { _realY?: number })._realY !== undefined
+            ) {
+              return `Manual BG: ${(context.raw as { _realY: number })._realY} mmol/L`;
             }
             // Default for other points
             return `${context.dataset.label}: ${context.parsed.y} mmol/L`;
@@ -525,7 +535,8 @@ const BloodSugarWidget: React.FC<BloodSugarWidgetProps> = ({ nightscoutUrl, acti
           </p>
           <p className="text-sm">Last updated: {new Date(timestamp || '').toLocaleString()}</p>
           <div className="mt-4 bg-white p-4 rounded-md" style={{ height: '200px', width: '100%' }}>
-            <Line data={chartData} options={chartOptions} />
+            
+            <Chart type="line" data={chartData} options={chartOptions} />
           </div>
           <div className="flex justify-center mt-4 gap-2 sm:gap-1">
             <button
